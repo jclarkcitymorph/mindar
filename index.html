@@ -48,20 +48,11 @@
       device-orientation-permission-ui="enabled: false"
     >
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <a-entity id="marker" mindar-image-target="targetIndex: 0">
-        <a-box
-          id="obj"
-          position="0 0 0"
-          rotation="0 0 0"
-          scale="0.5 0.5 0.5"
-          material="color: #FF0000"
-          visible="true"
-        ></a-box>
-      </a-entity>
+      <a-entity id="marker" mindar-image-target="targetIndex: 0"> </a-entity>
       <a-box
-        id="obj2"
-        position="0 0 -5"
-        rotation="15 0 0"
+        id="obj"
+        position="10000 10000 10000"
+        rotation="0 0 0"
         scale="0.5 0.5 0.5"
         material="color: #FF0000"
         visible="true"
@@ -71,6 +62,22 @@
   <script>
     AFRAME.registerComponent("frame-updater", {
       init: function () {
+        // Hard Coded Vals
+        // // Limits
+        this.rotationalLimits = {
+          x: {
+            min: -15,
+            max: 15,
+          },
+          y: {
+            min: -15,
+            max: 15,
+          },
+          z: {
+            min: -15,
+            max: -15,
+          },
+        };
         // Temp Vals
         // // Flags
         this.markerFound = false;
@@ -83,6 +90,49 @@
         this.tmpQuat = new AFRAME.THREE.Quaternion();
         this.tmpScl = new AFRAME.THREE.Vector3();
         this.tmpEuler = new AFRAME.THREE.Euler();
+        // // Last Known Marker Values
+        this.markerData = {
+          position: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+          rotation: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+          scale: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+        };
+        this.priorMarkerData = [];
+        // // Last Known Obj Values
+        this.objScaleTransform = {
+          x: 1,
+          y: 1,
+          z: 1,
+        };
+        this.objData = {
+          position: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+          rotation: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+          scale: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+        };
+        this.priorObjData = [];
         // // Misc
         this.Pi = Math.Pi;
         this.twoPi = Math.PI * 2;
@@ -92,7 +142,6 @@
         this.scene = document.querySelector("a-scene");
         this.camera = document.querySelector("a-entity[camera]");
         this.obj = document.querySelector("#obj");
-        this.obj2 = document.querySelector("#obj2");
 
         // Dev Tools
         this.devTools = document.querySelector("#dev-tools");
@@ -167,6 +216,10 @@
         });
 
         // Update Funcs
+        //!
+        this.updateTmpData = function () {
+          if (!this.markerFound) return;
+        };
         this.updateMarkerData = function () {
           if (!this.markerFound) return;
 
@@ -208,32 +261,23 @@
         this.updateObjData = function () {
           if (!this.markerFound || !this.obj) return;
 
-          const o = this.obj.object3D;
-          if (!o.visible) return; // only when MindAR is tracking
-
-          // MindAR writes to matrixWorld; decompose it
-          o.updateMatrixWorld(true);
-          o.matrixWorld.decompose(this.tmpPos, this.tmpQuat, this.tmpScl);
-
-          // Rotation (degrees, XYZ)
-          this.tmpEuler.setFromQuaternion(this.tmpQuat, "XYZ");
-          const rad2deg = 180 / Math.PI;
-          const rotX = (this.tmpEuler.x * rad2deg).toFixed(1);
-          const rotY = (this.tmpEuler.y * rad2deg).toFixed(1);
-          const rotZ = (this.tmpEuler.z * rad2deg).toFixed(1);
-
-          // Position
-          this.noticeObjPosition.textContent = `Pos: {x: ${this.tmpPos.x.toFixed(
-            2
-          )}, y: ${this.tmpPos.y.toFixed(2)}, z: ${this.tmpPos.z.toFixed(2)}}`;
-
-          // Rotation
-          this.noticeObjRotation.textContent = `Rot: {x: ${rotX}°, y: ${rotY}°, z: ${rotZ}°}`;
-
-          // Scale
-          this.noticeObjScale.textContent = `Scl: {x: ${this.tmpScl.x.toFixed(
-            2
-          )}, y: ${this.tmpScl.y.toFixed(2)}, z: ${this.tmpScl.z.toFixed(2)}}`;
+          const marker3d = this.marker.object3D;
+          marker3d.updateMatrixWorld(true);
+          marker3d.matrixWorld.decompose(
+            this.tmpPos,
+            this.tmpQuat,
+            this.tmpScl
+          );
+          this.obj.setAttribute("position", {
+            x: this.tmpPos.x,
+            y: this.tmpPos.y,
+            z: this.tmpPos.z,
+          });
+          this.obj.setAttribute("scale", {
+            x: this.tmpScl.x,
+            y: this.tmpScl.y,
+            z: this.tmpScl.z,
+          });
         };
       },
       tick: function (time, timeDelta) {

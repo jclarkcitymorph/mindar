@@ -53,12 +53,46 @@
       <a-entity id="marker" mindar-image-target="targetIndex: 0"> </a-entity>
       <a-plane
         id="obj"
-        position="10000 10000 10000"
-        rotation="-90 0 0"
-        width="2"
-        height="1"
+        position="0 0 -10"
+        rotation="0 0 0"
+        scale="1 1 1"
+        width="1.6"
+        height=".9"
         visible="true"
         material="src: #hls-video; shader: flat;"
+      ></a-plane>
+
+      <!-- Move planes well inside the frustum -->
+      <!-- Top-left corner - Red -->
+      <a-plane
+        position="-5.53 2.86 -10"
+        width="1"
+        height="1"
+        color="red"
+      ></a-plane>
+
+      <!-- Top-right corner - Green -->
+      <a-plane
+        position="5.53 2.86 -10"
+        width="1"
+        height="1"
+        color="green"
+      ></a-plane>
+
+      <!-- Bottom-left corner - Blue -->
+      <a-plane
+        position="-5.53 -2.86 -10"
+        width="1"
+        height="1"
+        color="blue"
+      ></a-plane>
+
+      <!-- Bottom-right corner - Yellow -->
+      <a-plane
+        position="5.53 -2.86 -10"
+        width="1"
+        height="1"
+        color="yellow"
       ></a-plane>
     </a-scene>
   </body>
@@ -81,13 +115,6 @@
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Auto-play attempt (might be blocked by browser)
-        video.play().catch((e) => {
-          console.log("Autoplay blocked, user interaction required");
-        });
-      });
-
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error("HLS Error:", data);
       });
@@ -104,6 +131,10 @@
     AFRAME.registerComponent("frame-scene", {
       init: function () {
         // Hard Coded Vals
+        this.windowSize = {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        };
         // // Limits
         this.rotationalLimits = {
           x: {
@@ -182,7 +213,7 @@
         // Rendered Elements
         this.marker = document.querySelector("#marker");
         this.scene = document.querySelector("a-scene");
-        this.camera = document.querySelector("a-entity[camera]");
+        this.camera = document.querySelector("a-camera");
         this.obj = document.querySelector("#obj");
 
         // Video
@@ -230,8 +261,12 @@
           );
         });
         // // AR Events
+        this.scene.addEventListener("arReady", () => {
+          this.syncCameraProperties();
+        });
         // // Marker Events
         this.marker.addEventListener("targetFound", () => {
+          console.log("Event: Target Found");
           this.markerFound = true;
           this.noticeFoundMarker.textContent = "Marker Found";
           this.noticeFoundMarker.setAttribute("data-status", "good");
@@ -239,12 +274,30 @@
           this.updateMarkerData();
         });
         this.marker.addEventListener("targetLost", () => {
+          console.log("Event: Target Lost");
           this.markerFound = false;
           this.noticeFoundMarker.textContent = "Marker Lost";
           this.noticeFoundMarker.setAttribute("data-status", "bad");
-          // this.video.pause();
+          snapPlaneToTopEdges({
+            plane: this.obj,
+            camera: this.camera,
+            video: this.video,
+          });
         });
 
+        // Sync Camera
+        this.syncCameraProperties = function () {
+          if (this.camera.object3D && this.camera.object3D.children[0]) {
+            const threeCamera = this.camera.object3D.children[0];
+
+            // Update A-Frame camera to match THREE.js
+            this.camera.setAttribute("camera", {
+              fov: threeCamera.fov,
+              near: threeCamera.near,
+              far: threeCamera.far,
+            });
+          }
+        };
         // Update Funcs
         this.updateTmpData = function () {
           if (!this.markerFound) return;
@@ -329,8 +382,54 @@
       },
     });
 
+    function snapPlaneToTopEdges({ plane, camera, video, distance = 1 }) {
+      // Corner positions
+      const topLeft = { x: -5.53, y: 2.86, z: -10 };
+      const topRight = { x: 5.53, y: 2.86, z: -10 };
+
+      // Calculate desired dimensions
+      const desiredWidth = topRight.x - topLeft.x; // 11.06
+      const aspectRatio = 16 / 9;
+      const desiredHeight = desiredWidth / aspectRatio; // 6.22
+
+      // Get original plane dimensions
+      const originalWidth = 1.6;
+      const originalHeight = 0.9;
+
+      // Calculate scale factors
+      const scaleX = desiredWidth / originalWidth; // 11.06 / 1.6 = 6.91
+      const scaleY = desiredHeight / originalHeight; // 6.22 / 0.9 = 6.91
+      const scaleZ = 1;
+
+      // Position center (moved down by half the desired height)
+      const centerX = (topLeft.x + topRight.x) / 2; // 0
+      const centerY = topLeft.y - desiredHeight / 2; // 2.86 - 3.11 = -0.25
+      const centerZ = topLeft.z; // -10
+
+      plane.setAttribute("position", {
+        x: centerX,
+        y: centerY,
+        z: centerZ,
+      });
+
+      plane.setAttribute("rotation", {
+        x: 0,
+        y: 0,
+        z: 0,
+      });
+
+      plane.setAttribute("scale", {
+        x: scaleX, // 6.91
+        y: scaleY, // 6.91
+        z: scaleZ, // 1
+      });
+    }
+
     function clamp(num, min, max) {
       return Math.min(Math.max(num, min), max);
+    }
+    function lerp(x, y, a) {
+      return x * (1 - a) + y * a;
     }
   </script>
 </html>

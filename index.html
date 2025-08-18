@@ -52,6 +52,7 @@
     </div>
     <a-scene
       id="scene"
+      frame-updater
       mindar-image="imageTargetSrc: ./targets.mind;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
@@ -62,7 +63,7 @@
           id="obj"
           position="0 0 0"
           rotation="0 0 0"
-          scale="1 1 1"
+          scale="0.5 0.5 0.5"
           material="color: #FF0000"
           visible="true"
         ></a-box>
@@ -154,15 +155,17 @@
 
     // Marker Events
     marker.addEventListener("targetFound", () => {
-      updateMarkerData();
+      markerFound = true;
       noticeFoundMarker.textContent = "Marker Found";
       noticeFoundMarker.setAttribute("data-status", "good");
-      markerFound = true;
+      updateMarkerData();
+
+      console.log(JSON.stringify(marker.object3D));
     });
     marker.addEventListener("targetLost", () => {
+      markerFound = false;
       noticeFoundMarker.textContent = "Marker Lost";
       noticeFoundMarker.setAttribute("data-status", "bad");
-      markerFound = false;
     });
 
     function updateMarkerData() {
@@ -208,20 +211,7 @@
         2
       )}, y: ${scale.y.toFixed(2)}, z: ${scale.z.toFixed(2)}}`;
     }
-    // function updateCameraData() {
-    //   const { position, rotation, scale } = camera.object3D;
-    //   noticeCameraPosition.textContent = `Pos: {x: ${position.x.toFixed(
-    //     2
-    //   )}, y: ${position.y.toFixed(2)}, z: ${position.z.toFixed(2)}}`;
-    //   const rotX = ((rotation.x * 180) / Math.PI).toFixed(1);
-    //   const rotY = ((rotation.y * 180) / Math.PI).toFixed(1);
-    //   const rotZ = ((rotation.z * 180) / Math.PI).toFixed(1);
-    //   noticeCameraRotation.textContent = `Rot: {x: ${rotX}°, y: ${rotY}°, z: ${rotZ}°}`;
-    //   noticeCameraScale.textContent = `Scl: {x: ${scale.x.toFixed(
-    //     2
-    //   )}, y: ${scale.y.toFixed(2)}, z: ${scale.z.toFixed(2)}}`;
-    // }
-    // Create and Register Per Frame Updates
+
     AFRAME.registerComponent("frame-updater", {
       init: function () {
         this.frameCount = 0;
@@ -242,7 +232,6 @@
           updateMarkerData();
           updateObjData();
         }
-        // updateCameraData();
       },
     });
   </script>

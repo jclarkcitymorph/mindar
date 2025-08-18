@@ -31,14 +31,6 @@
           <li id="notice-marker-scale">Scl: -</li>
         </ul>
       </div>
-      <div id="notice-board-obj" class="notice-board-div">
-        <button id="notice-board-obj-show-hide-btn">Obj</button>
-        <ul class="notice-board" data-show-status="showing">
-          <li id="notice-obj-position">Pos: -</li>
-          <li id="notice-obj-rotation">Rot: -</li>
-          <li id="notice-obj-scale">Scl: -</li>
-        </ul>
-      </div>
     </div>
     <a-scene
       id="scene"
@@ -75,7 +67,7 @@
           },
           z: {
             min: -15,
-            max: -15,
+            max: 15,
           },
         };
         // Temp Vals
@@ -90,6 +82,7 @@
         this.tmpQuat = new AFRAME.THREE.Quaternion();
         this.tmpScl = new AFRAME.THREE.Vector3();
         this.tmpEuler = new AFRAME.THREE.Euler();
+        this.tmpRot = { x: 0, y: 0, z: 0 };
         // // Last Known Marker Values
         this.markerData = {
           position: {
@@ -151,14 +144,8 @@
         this.markerShowHideBtn = document.querySelector(
           `#notice-board-marker-show-hide-btn`
         );
-        this.objShowHideBtn = document.querySelector(
-          "#notice-board-obj-show-hide-btn"
-        );
         this.markerNoticeBoard = document.querySelector(
           `#notice-board-marker>.notice-board`
-        );
-        this.objNoticeBoard = document.querySelector(
-          `#notice-board-obj>.notice-board`
         );
         this.noticeFpsDisplay = document.querySelector("#notice-fps-display");
         this.noticeFoundMarker = document.querySelector("#notice-marker-found");
@@ -169,9 +156,6 @@
           "#notice-marker-rotation"
         );
         this.noticeMarkerScale = document.querySelector("#notice-marker-scale");
-        this.noticeObjPosition = document.querySelector("#notice-obj-position");
-        this.noticeObjRotation = document.querySelector("#notice-obj-rotation");
-        this.noticeObjScale = document.querySelector("#notice-obj-scale");
 
         // Register Events
         // // Click Events
@@ -193,14 +177,6 @@
             showingStatus === "showing" ? "hidden" : "showing"
           );
         });
-        this.objShowHideBtn.addEventListener("click", () => {
-          const showingStatus =
-            this.objNoticeBoard.getAttribute("data-show-status");
-          this.objNoticeBoard.setAttribute(
-            "data-show-status",
-            showingStatus === "showing" ? "hidden" : "showing"
-          );
-        });
         // // AR Events
         // // Marker Events
         this.marker.addEventListener("targetFound", () => {
@@ -216,13 +192,8 @@
         });
 
         // Update Funcs
-        //!
         this.updateTmpData = function () {
           if (!this.markerFound) return;
-        };
-        this.updateMarkerData = function () {
-          if (!this.markerFound) return;
-
           const marker3d = marker.object3D;
           marker3d.updateMatrixWorld(true);
           marker3d.matrixWorld.decompose(
@@ -232,26 +203,23 @@
           );
           this.tmpEuler.setFromQuaternion(this.tmpQuat, "XYZ");
           const d = AFRAME.THREE.MathUtils.radToDeg;
-          const rotDeg = {
+          this.tmpRot = {
             x: d(this.tmpEuler.x),
             y: d(this.tmpEuler.y),
             z: d(this.tmpEuler.z),
           };
-
-          console.log({
-            position: { x: this.tmpPos.x, y: this.tmpPos.y, z: this.tmpPos.z },
-            rotationDeg: rotDeg,
-            scale: { x: this.tmpScl.x, y: this.tmpScl.y, z: this.tmpScl.z },
-          });
+        };
+        this.updateMarkerData = function () {
+          if (!this.markerFound) return;
 
           // Position
           this.noticeMarkerPosition.textContent = `Pos: {x: ${this.tmpPos.x.toFixed(
             2
           )}, y: ${this.tmpPos.y.toFixed(2)}, z: ${this.tmpPos.z.toFixed(2)}}`;
           // Rotation
-          const rotX = rotDeg.x.toFixed(1);
-          const rotY = rotDeg.y.toFixed(1);
-          const rotZ = rotDeg.z.toFixed(1);
+          const rotX = this.tmpRot.x.toFixed(1);
+          const rotY = this.tmpRot.y.toFixed(1);
+          const rotZ = this.tmpRot.z.toFixed(1);
           this.noticeMarkerRotation.textContent = `Rot: {x: ${rotX}°, y: ${rotY}°, z: ${rotZ}°}`;
           // Scale
           this.noticeMarkerScale.textContent = `Scl: {x: ${this.tmpScl.x.toFixed(
@@ -260,14 +228,6 @@
         };
         this.updateObjData = function () {
           if (!this.markerFound || !this.obj) return;
-
-          const marker3d = this.marker.object3D;
-          marker3d.updateMatrixWorld(true);
-          marker3d.matrixWorld.decompose(
-            this.tmpPos,
-            this.tmpQuat,
-            this.tmpScl
-          );
           this.obj.setAttribute("position", {
             x: this.tmpPos.x,
             y: this.tmpPos.y,
@@ -277,6 +237,23 @@
             x: this.tmpScl.x,
             y: this.tmpScl.y,
             z: this.tmpScl.z,
+          });
+          this.obj.setAttribute("rotation", {
+            x: clamp(
+              this.tmpRot.x,
+              this.rotationalLimits.x.min,
+              this.rotationalLimits.x.max
+            ),
+            y: clamp(
+              this.tmpRot.y,
+              this.rotationalLimits.y.min,
+              this.rotationalLimits.y.max
+            ),
+            z: clamp(
+              this.tmpRot.z,
+              this.rotationalLimits.z.min,
+              this.rotationalLimits.z.max
+            ),
           });
         };
       },
@@ -291,10 +268,15 @@
           this.noticeFpsDisplay.textContent = `FPS: ${this.fps}`;
         }
         if (this.markerFound) {
+          this.updateTmpData();
           this.updateMarkerData();
           this.updateObjData();
         }
       },
     });
+
+    function clamp(num, min, max) {
+      return Math.min(Math.max(num, min), max);
+    }
   </script>
 </html>

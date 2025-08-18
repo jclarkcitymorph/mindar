@@ -34,25 +34,74 @@
     </div>
     <a-scene
       id="scene"
-      frame-updater
+      frame-scene
       mindar-image="imageTargetSrc: ./targets.mind;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
+      <a-assets>
+        <video
+          id="hls-video"
+          preload="metadata"
+          crossorigin="anonymous"
+          muted="true"
+          playsinline="true"
+          loop="true"
+        ></video>
+      </a-assets>
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
       <a-entity id="marker" mindar-image-target="targetIndex: 0"> </a-entity>
-      <a-box
+      <a-plane
         id="obj"
         position="10000 10000 10000"
-        rotation="0 0 0"
-        scale="0.5 0.5 0.5"
-        material="color: #FF0000"
+        rotation="-90 0 0"
+        width="2"
+        height="1"
         visible="true"
-      ></a-box>
+        material="src: #hls-video; shader: flat;"
+      ></a-plane>
     </a-scene>
   </body>
   <script>
-    AFRAME.registerComponent("frame-updater", {
+    const video = document.querySelector("#hls-video");
+    video.volume = 1;
+    video.muted = true;
+    const hlsUrl =
+      "https://reel-em-in-hls-bucket.s3-us-west-1.amazonaws.com/bab4eed3-a93e-4dff-ae47-6a29195f2a23/playlist.m3u8";
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        debug: false,
+        enableWorker: true,
+        lowLatencyMode: false, // Changed to reduce memory usage
+        maxBufferLength: 10, // Reduced buffer length
+        maxMaxBufferLength: 20, // Reduced max buffer length
+        maxBufferSize: 60 * 1000 * 1000, // 60MB buffer limit
+      });
+
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Auto-play attempt (might be blocked by browser)
+        video.play().catch((e) => {
+          console.log("Autoplay blocked, user interaction required");
+        });
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error("HLS Error:", data);
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Safari native HLS support
+      video.src = hlsUrl;
+      video.addEventListener("loadedmetadata", () => {
+        video.play().catch((e) => {
+          console.log("Autoplay blocked, user interaction required");
+        });
+      });
+    }
+
+    AFRAME.registerComponent("frame-scene", {
       init: function () {
         // Hard Coded Vals
         // // Limits
@@ -136,6 +185,9 @@
         this.camera = document.querySelector("a-entity[camera]");
         this.obj = document.querySelector("#obj");
 
+        // Video
+        this.video = document.querySelector("#hls-video");
+
         // Dev Tools
         this.devTools = document.querySelector("#dev-tools");
         this.devToolsShowHideBtn = document.querySelector(
@@ -183,12 +235,14 @@
           this.markerFound = true;
           this.noticeFoundMarker.textContent = "Marker Found";
           this.noticeFoundMarker.setAttribute("data-status", "good");
+          this.video.play();
           this.updateMarkerData();
         });
         this.marker.addEventListener("targetLost", () => {
           this.markerFound = false;
           this.noticeFoundMarker.textContent = "Marker Lost";
           this.noticeFoundMarker.setAttribute("data-status", "bad");
+          // this.video.pause();
         });
 
         // Update Funcs

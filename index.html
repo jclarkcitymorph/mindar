@@ -53,7 +53,7 @@
       <a-entity id="marker" mindar-image-target="targetIndex: 0"> </a-entity>
       <a-plane
         id="obj"
-        position="0 0 -10"
+        position="1000 1000 -10"
         rotation="0 0 0"
         scale="1 1 1"
         width="1.6"
@@ -62,34 +62,30 @@
         material="src: #hls-video; shader: flat;"
       ></a-plane>
 
-      <!-- Move planes well inside the frustum -->
-      <!-- Top-left corner - Red -->
       <a-plane
-        position="-5.53 2.86 -10"
+        id="topLeft"
+        position="10000 10000 10000"
         width="1"
         height="1"
         color="red"
       ></a-plane>
-
-      <!-- Top-right corner - Green -->
       <a-plane
-        position="5.53 2.86 -10"
+        id="topRight"
+        position="10000 10000 10000"
         width="1"
         height="1"
         color="green"
       ></a-plane>
-
-      <!-- Bottom-left corner - Blue -->
       <a-plane
-        position="-5.53 -2.86 -10"
+        id="bottomLeft"
+        position="10000 10000 10000"
         width="1"
         height="1"
         color="blue"
       ></a-plane>
-
-      <!-- Bottom-right corner - Yellow -->
       <a-plane
-        position="5.53 -2.86 -10"
+        id="bottomRight"
+        position="10000 10000 10000"
         width="1"
         height="1"
         color="yellow"
@@ -102,14 +98,15 @@
     video.muted = true;
     const hlsUrl =
       "https://reel-em-in-hls-bucket.s3-us-west-1.amazonaws.com/bab4eed3-a93e-4dff-ae47-6a29195f2a23/playlist.m3u8";
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         debug: false,
         enableWorker: true,
-        lowLatencyMode: false, // Changed to reduce memory usage
-        maxBufferLength: 10, // Reduced buffer length
-        maxMaxBufferLength: 20, // Reduced max buffer length
-        maxBufferSize: 60 * 1000 * 1000, // 60MB buffer limit
+        lowLatencyMode: false,
+        maxBufferLength: 10,
+        maxMaxBufferLength: 20,
+        maxBufferSize: 60 * 1000 * 1000,
       });
 
       hls.loadSource(hlsUrl);
@@ -131,10 +128,7 @@
     AFRAME.registerComponent("frame-scene", {
       init: function () {
         // Hard Coded Vals
-        this.windowSize = {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        };
+        this.lerpRate = 0.2;
         // // Limits
         this.rotationalLimits = {
           x: {
@@ -152,6 +146,7 @@
         };
         // Temp Vals
         // // Flags
+        this.started = false;
         this.markerFound = false;
         // // Update Vals
         this.frameCount = 0;
@@ -163,8 +158,39 @@
         this.tmpScl = new AFRAME.THREE.Vector3();
         this.tmpEuler = new AFRAME.THREE.Euler();
         this.tmpRot = { x: 0, y: 0, z: 0 };
-        // // Last Known Marker Values
-        this.markerData = {
+        // Corners
+        this.corners = {
+          topLeft: {
+            x: 0,
+            y: 0,
+            z: 0,
+            width: 0,
+            height: 0,
+          },
+          topRight: {
+            x: 0,
+            y: 0,
+            z: 0,
+            width: 0,
+            height: 0,
+          },
+          bottomLeft: {
+            x: 0,
+            y: 0,
+            z: 0,
+            width: 0,
+            height: 0,
+          },
+          bottomRight: {
+            x: 0,
+            y: 0,
+            z: 0,
+            width: 0,
+            height: 0,
+          },
+        };
+        // Current Obj Data
+        this.currObjData = {
           position: {
             x: 0,
             y: 0,
@@ -181,14 +207,8 @@
             z: 0,
           },
         };
-        this.priorMarkerData = [];
-        // // Last Known Obj Values
-        this.objScaleTransform = {
-          x: 1,
-          y: 1,
-          z: 1,
-        };
-        this.objData = {
+        // Goal Obj Data
+        this.goalObjData = {
           position: {
             x: 0,
             y: 0,
@@ -205,7 +225,7 @@
             z: 0,
           },
         };
-        this.priorObjData = [];
+
         // // Misc
         this.Pi = Math.Pi;
         this.twoPi = Math.PI * 2;
@@ -240,6 +260,11 @@
         );
         this.noticeMarkerScale = document.querySelector("#notice-marker-scale");
 
+        this.topLeft = document.querySelector("#topLeft");
+        this.topRight = document.querySelector("#topRight");
+        this.bottomLeft = document.querySelector("#bottomLeft");
+        this.bottomRight = document.querySelector("#bottomRight");
+
         // Register Events
         // // Click Events
         this.devToolsShowHideBtn.addEventListener("click", () => {
@@ -263,29 +288,34 @@
         // // AR Events
         this.scene.addEventListener("arReady", () => {
           this.syncCameraProperties();
+          this.calculateScreenCorners();
         });
         // // Marker Events
         this.marker.addEventListener("targetFound", () => {
-          console.log("Event: Target Found");
+          this.updateMarkerData();
           this.markerFound = true;
           this.noticeFoundMarker.textContent = "Marker Found";
           this.noticeFoundMarker.setAttribute("data-status", "good");
-          this.video.play();
-          this.updateMarkerData();
+
+          if (!this.started) {
+            this.started = true;
+            this.video.play();
+          }
+          this.goalObjData = this.genMarkerGoalObjData();
+          this.currObjData = this.genMarkerGoalObjData();
+          this.lerpRate = 1;
+          this.updateObjData();
         });
         this.marker.addEventListener("targetLost", () => {
           console.log("Event: Target Lost");
           this.markerFound = false;
           this.noticeFoundMarker.textContent = "Marker Lost";
           this.noticeFoundMarker.setAttribute("data-status", "bad");
-          snapPlaneToTopEdges({
-            plane: this.obj,
-            camera: this.camera,
-            video: this.video,
-          });
+          this.lerpRate = 0.2;
+          this.goalObjData = this.genEdgesGoalObjData();
         });
 
-        // Sync Camera
+        // Camera Funcs
         this.syncCameraProperties = function () {
           if (this.camera.object3D && this.camera.object3D.children[0]) {
             const threeCamera = this.camera.object3D.children[0];
@@ -297,6 +327,93 @@
               far: threeCamera.far,
             });
           }
+        };
+        this.calculateScreenCorners = function () {
+          const threeCamera = this.camera.object3D.children[0];
+
+          const near = threeCamera.near;
+          const fov = threeCamera.fov;
+          const aspect = threeCamera.aspect;
+
+          const zDistance = -near;
+
+          const verticalHalfFOVRad = (fov / 2) * (Math.PI / 180);
+
+          const tanResult = Math.tan(verticalHalfFOVRad);
+
+          const halfHeight = near * tanResult;
+
+          const halfWidth = halfHeight * aspect;
+          this.corners = {
+            topLeft: {
+              x: -halfWidth,
+              y: halfHeight,
+              z: zDistance,
+              width: 1,
+              height: 1,
+            },
+            topRight: {
+              x: halfWidth,
+              y: halfHeight,
+              z: zDistance,
+              width: 1,
+              height: 1,
+            },
+            bottomLeft: {
+              x: -halfWidth,
+              y: -halfHeight,
+              z: zDistance,
+              width: 1,
+              height: 1,
+            },
+            bottomRight: {
+              x: halfWidth,
+              y: -halfHeight,
+              z: zDistance,
+              width: 1,
+              height: 1,
+            },
+          };
+          // Set topLeft corner plane
+          this.topLeft.setAttribute(
+            "position",
+            `${this.corners.topLeft.x} ${this.corners.topLeft.y} ${this.corners.topLeft.z}`
+          );
+          this.topLeft.setAttribute("width", this.corners.topLeft.width);
+          this.topLeft.setAttribute("height", this.corners.topLeft.height);
+
+          // Set topRight corner plane
+          this.topRight.setAttribute(
+            "position",
+            `${this.corners.topRight.x} ${this.corners.topRight.y} ${this.corners.topRight.z}`
+          );
+          this.topRight.setAttribute("width", this.corners.topRight.width);
+          this.topRight.setAttribute("height", this.corners.topRight.height);
+
+          // Set bottomLeft corner plane
+          this.bottomLeft.setAttribute(
+            "position",
+            `${this.corners.bottomLeft.x} ${this.corners.bottomLeft.y} ${this.corners.bottomLeft.z}`
+          );
+          this.bottomLeft.setAttribute("width", this.corners.bottomLeft.width);
+          this.bottomLeft.setAttribute(
+            "height",
+            this.corners.bottomLeft.height
+          );
+
+          // Set bottomRight corner plane
+          this.bottomRight.setAttribute(
+            "position",
+            `${this.corners.bottomRight.x} ${this.corners.bottomRight.y} ${this.corners.bottomRight.z}`
+          );
+          this.bottomRight.setAttribute(
+            "width",
+            this.corners.bottomRight.width
+          );
+          this.bottomRight.setAttribute(
+            "height",
+            this.corners.bottomRight.height
+          );
         };
         // Update Funcs
         this.updateTmpData = function () {
@@ -319,6 +436,8 @@
         this.updateMarkerData = function () {
           if (!this.markerFound) return;
 
+          this.goalObjData = this.genMarkerGoalObjData();
+
           // Position
           this.noticeMarkerPosition.textContent = `Pos: {x: ${this.tmpPos.x.toFixed(
             2
@@ -334,34 +453,112 @@
           )}, y: ${this.tmpScl.y.toFixed(2)}, z: ${this.tmpScl.z.toFixed(2)}}`;
         };
         this.updateObjData = function () {
-          if (!this.markerFound || !this.obj) return;
+          if (!this.started || !this.obj) return;
+
+          this.currObjData = this.calcNewCurrObjData(
+            this.currObjData,
+            this.goalObjData,
+            this.lerpRate
+          );
+
           this.obj.setAttribute("position", {
-            x: this.tmpPos.x,
-            y: this.tmpPos.y,
-            z: this.tmpPos.z,
+            x: this.currObjData.position.x,
+            y: this.currObjData.position.y,
+            z: this.currObjData.position.z,
           });
           this.obj.setAttribute("scale", {
-            x: this.tmpScl.x,
-            y: this.tmpScl.y,
-            z: this.tmpScl.z,
+            x: this.currObjData.scale.x,
+            y: this.currObjData.scale.y,
+            z: this.currObjData.scale.z,
           });
           this.obj.setAttribute("rotation", {
-            x: clamp(
-              this.tmpRot.x,
-              this.rotationalLimits.x.min,
-              this.rotationalLimits.x.max
-            ),
-            y: clamp(
-              this.tmpRot.y,
-              this.rotationalLimits.y.min,
-              this.rotationalLimits.y.max
-            ),
-            z: clamp(
-              this.tmpRot.z,
-              this.rotationalLimits.z.min,
-              this.rotationalLimits.z.max
-            ),
+            x: this.currObjData.rotation.x,
+            y: this.currObjData.rotation.y,
+            z: this.currObjData.rotation.z,
           });
+        };
+        // Util Funcs
+        this.genEdgesGoalObjData = function () {
+          const topLeft = this.corners.topLeft;
+          const topRight = this.corners.topRight;
+          const desiredWidth = topRight.x - topLeft.x;
+          const aspectRatio = 16 / 9;
+          const desiredHeight = desiredWidth / aspectRatio;
+          const originalWidth = 1.6;
+          const originalHeight = 0.9;
+          const scaleX = desiredWidth / originalWidth;
+          const scaleY = desiredHeight / originalHeight;
+          const scaleZ = 1;
+          const centerX = (topLeft.x + topRight.x) / 2;
+          const centerY = topLeft.y - desiredHeight / 2;
+          const centerZ = topLeft.z;
+          return {
+            position: {
+              x: centerX,
+              y: centerY,
+              z: centerZ,
+            },
+            rotation: {
+              x: 0,
+              y: 0,
+              z: 0,
+            },
+            scale: {
+              x: scaleX,
+              y: scaleY,
+              z: scaleZ,
+            },
+          };
+        };
+        this.genMarkerGoalObjData = function () {
+          return {
+            position: {
+              x: this.tmpPos.x,
+              y: this.tmpPos.y,
+              z: this.tmpPos.z,
+            },
+            rotation: {
+              x: clamp(
+                this.tmpRot.x,
+                this.rotationalLimits.x.min,
+                this.rotationalLimits.x.max
+              ),
+              y: clamp(
+                this.tmpRot.y,
+                this.rotationalLimits.y.min,
+                this.rotationalLimits.y.max
+              ),
+              z: clamp(
+                this.tmpRot.z,
+                this.rotationalLimits.z.min,
+                this.rotationalLimits.z.max
+              ),
+            },
+            scale: {
+              x: this.tmpScl.x,
+              y: this.tmpScl.y,
+              z: this.tmpScl.z,
+            },
+          };
+        };
+        this.calcNewCurrObjData = function (curr, goal, lerpRate) {
+          return {
+            position: {
+              x: lerp(curr.position.x, goal.position.x, lerpRate),
+              y: lerp(curr.position.y, goal.position.y, lerpRate),
+              z: lerp(curr.position.z, goal.position.z, lerpRate),
+            },
+            rotation: {
+              x: lerp(curr.rotation.x, goal.rotation.x, lerpRate),
+              y: lerp(curr.rotation.y, goal.rotation.y, lerpRate),
+              z: lerp(curr.rotation.z, goal.rotation.z, lerpRate),
+            },
+            scale: {
+              x: lerp(curr.scale.x, goal.scale.x, lerpRate),
+              y: lerp(curr.scale.y, goal.scale.y, lerpRate),
+              z: lerp(curr.scale.z, goal.scale.z, lerpRate),
+            },
+          };
         };
       },
       tick: function (time, timeDelta) {
@@ -377,8 +574,8 @@
         if (this.markerFound) {
           this.updateTmpData();
           this.updateMarkerData();
-          this.updateObjData();
         }
+        this.updateObjData();
       },
     });
 

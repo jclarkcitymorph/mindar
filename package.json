@@ -1,0 +1,23 @@
+{
+  "name": "vite-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "deploy": "tsc && vite build && gh-pages -d dist"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "gh-pages": "^6.3.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.0"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "canvas": "^3.1.2",
+    "jsdom": "^26.1.0",
+    "mind-ar": "^1.2.2"
+  }
+}

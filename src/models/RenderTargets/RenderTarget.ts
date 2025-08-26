@@ -39,12 +39,12 @@ export default class RenderTarget {
       "Instance of Render target called onFirstSeen() without implementation"
     );
   }
-  public onMarkerLost(): void {
+  public onMarkerLost(_data: TRenderTargetUpdateData): void {
     throw new Error(
       "Instance of Render target called onMarkerLost() without implementation"
     );
   }
-  public onMarkerFound(): void {
+  public onMarkerFound(_data: TRenderTargetUpdateData): void {
     throw new Error(
       "Instance of Render target called onMarkerFound() without implementation"
     );

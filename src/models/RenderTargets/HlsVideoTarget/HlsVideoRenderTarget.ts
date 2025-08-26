@@ -130,18 +130,18 @@ export default class HlsVideoRenderTarget implements RenderTarget {
 
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
-      this.vectorRotationLimits.x.min || 0,
-      this.vectorRotationLimits.x.max || 0
+      this.vectorRotationLimits.x.min || -360,
+      this.vectorRotationLimits.x.max || 360
     );
     avgMarkerData.rotation.y = clamp(
       avgMarkerData.rotation.y,
-      this.vectorRotationLimits.y.min || 0,
-      this.vectorRotationLimits.y.max || 0
+      this.vectorRotationLimits.y.min || -360,
+      this.vectorRotationLimits.y.max || 360
     );
     avgMarkerData.rotation.z = clamp(
       avgMarkerData.rotation.z,
-      this.vectorRotationLimits.z.min || 0,
-      this.vectorRotationLimits.z.max || 0
+      this.vectorRotationLimits.z.min || -360,
+      this.vectorRotationLimits.z.max || 360
     );
 
     this.renderData.update(avgMarkerData);

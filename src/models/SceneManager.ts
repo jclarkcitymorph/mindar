@@ -5,10 +5,9 @@ import type { TCorners } from "../types/TCorners";
 import type { TRenderData } from "../types/TRenderData";
 //
 // import AFRAME from "aframe";
-import Hls from "hls.js";
 import CornerRenderData from "./CornerRenderData";
-import RenderData from "./RenderData";
 import FpsData from "./FpsData";
+import type RenderTarget from "./RenderTargets/RenderTarget";
 
 type TSceneHtmlElements = {
   scene: Scene;
@@ -20,6 +19,11 @@ type TSceneHtmlElements = {
 
 const { Vector3, Quaternion, Euler } = THREE;
 const HISTORICS_TO_TRACK = 30;
+
+type TSceneManagerInput = {
+  renderTarget: RenderTarget;
+  isDebugging: boolean;
+};
 
 export default class SceneManager {
   private debug: TDebug;
@@ -38,16 +42,8 @@ export default class SceneManager {
     historic: Array<TRenderData>;
   };
   private cornerData: Record<TCorners, CornerRenderData>;
-  private renderObj: {
-    current: RenderData;
-    goal: RenderData;
-    offsetPerc: {
-      x: number;
-      y: number;
-      z: number;
-    };
-  };
-  constructor(isDebugging: boolean) {
+  private renderTarget: RenderTarget;
+  constructor({ renderTarget, isDebugging }: TSceneManagerInput) {
     this.flags = {
       sceneStarted: false,
     };
@@ -69,16 +65,11 @@ export default class SceneManager {
       topLeft: new CornerRenderData(),
       topRight: new CornerRenderData(),
     };
-    this.renderObj = {
-      current: new RenderData(),
-      goal: new RenderData(),
-      offsetPerc: {
-        x: 1,
-        y: 0.1,
-        z: 0.1,
-      },
-    };
-    this.createScene(isDebugging);
+    this.renderTarget = renderTarget;
+
+    const { htmlElements, debug } = this.createScene(isDebugging);
+    (this.htmlElements = htmlElements), (this.debug = debug);
+
     AFRAME.registerComponent("frame-scene", {
       init: this.init.bind(this),
       tick: this.tick.bind(this),
@@ -86,7 +77,10 @@ export default class SceneManager {
   }
 
   // HTML Generators
-  private createScene(isDebugging: boolean) {
+  private createScene(isDebugging: boolean): {
+    htmlElements: TSceneHtmlElements;
+    debug: TDebug;
+  } {
     const body = document.querySelector("body");
     if (body === null) {
       throw new Error("Body cannot be null");
@@ -134,7 +128,7 @@ export default class SceneManager {
     scene.appendChild(marker);
     scene.appendChild(renderObj);
 
-    this.htmlElements = {
+    const htmlElements: TSceneHtmlElements = {
       camera,
       marker,
       renderObj,
@@ -239,7 +233,7 @@ export default class SceneManager {
       body.append(devTools);
       body.append(scene);
 
-      this.debug = {
+      const debug: TDebug = {
         isDebugging: true,
         elements: {
           fps: {
@@ -261,15 +255,25 @@ export default class SceneManager {
           showHideBtn: devToolsShowHideBtn,
         },
       };
+      return {
+        htmlElements,
+        debug,
+      };
     } else {
       this.debug.isDebugging = false;
       body.append(scene);
+      return {
+        htmlElements,
+        debug: {
+          isDebugging: false,
+        },
+      };
     }
   }
 
   // LifeCycle Events
   private init() {
-    this.registerVideo();
+    this.renderTarget.init();
     this.registerArEvents();
     if (this.debug.isDebugging) {
       this.registerDevToolEvents();
@@ -279,45 +283,18 @@ export default class SceneManager {
     this.fpsData.update(time);
     this.tickUpdateScreenCornerData();
     this.tickUpdateMarkerData();
-    this.tickUpdateObjectRenderData();
-    // Debug Ticks
     this.tickUpdateScreenCornerHtml();
+    // Debug Ticks
     this.tickUpdateDevToolsFpsCounter();
     this.tickUpdateDevToolsMarkerDisplay();
+    // Render Target Update
+    this.renderTarget.tickUpdate({
+      marker: this.markerData,
+      corners: this.cornerData,
+    });
   }
 
   // Init Calls
-  private registerVideo() {
-    const video = this.htmlElements.video;
-    const hlsUrl =
-      "https://reel-em-in-hls-bucket.s3-us-west-1.amazonaws.com/bab4eed3-a93e-4dff-ae47-6a29195f2a23/playlist.m3u8";
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        debug: false,
-        enableWorker: true,
-        lowLatencyMode: false,
-        maxBufferLength: 10,
-        maxMaxBufferLength: 20,
-        maxBufferSize: 60 * 1000 * 1000,
-      });
-
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        console.error("HLS Error:", data);
-      });
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari native HLS support
-      video.src = hlsUrl;
-      video.addEventListener("loadedmetadata", () => {
-        video.play().catch((_e) => {
-          console.log("Autoplay blocked, user interaction required");
-        });
-      });
-    }
-  }
   private registerDevToolEvents() {
     if (this.debug.isDebugging) {
       const { devTools, showHideBtn } = this.debug.elements;
@@ -342,13 +319,17 @@ export default class SceneManager {
       this.markerData.found = true;
       if (!this.flags.sceneStarted) {
         this.flags.sceneStarted = true;
-        this.htmlElements.video.play();
+        this.renderTarget.onFirstSeen();
         document.querySelector(".mindar-ui-scanning")?.remove();
       }
       if (this.debug.isDebugging) {
         this.debug.elements.fps.foundMarker.textContent = "Marker Found";
         this.debug.elements.fps.foundMarker.setAttribute("data-status", "good");
       }
+      this.renderTarget.onMarkerFound({
+        marker: this.markerData,
+        corners: this.cornerData,
+      });
     });
     marker.addEventListener("targetLost", () => {
       this.markerData.found = false;
@@ -356,6 +337,10 @@ export default class SceneManager {
         this.debug.elements.fps.foundMarker.textContent = "Marker Lost";
         this.debug.elements.fps.foundMarker.setAttribute("data-status", "bad");
       }
+      this.renderTarget.onMarkerLost({
+        marker: this.markerData,
+        corners: this.cornerData,
+      });
     });
   }
   private syncCameraProperties() {
@@ -407,78 +392,6 @@ export default class SceneManager {
         );
       }
     }
-  }
-  private tickUpdateObjectRenderData(): void {
-    if (!this.flags.sceneStarted || this.markerData.historic.length === 0)
-      return;
-
-    const avgMarkerData: TRenderData = this.markerData.historic.reduce(
-      (prev, curr) => {
-        prev.position.x += curr.position.x;
-        prev.position.y += curr.position.y;
-        prev.position.z += curr.position.z;
-        prev.rotation.x += curr.rotation.x;
-        prev.rotation.y += curr.rotation.y;
-        prev.rotation.z += curr.rotation.z;
-        prev.scale.x += curr.scale.x;
-        prev.scale.y += curr.scale.y;
-        prev.scale.z += curr.scale.z;
-        return prev;
-      },
-      {
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 0, y: 0, z: 0 },
-      } as TRenderData
-    );
-
-    const count = this.markerData.historic.length;
-    avgMarkerData.position.x /= count;
-    avgMarkerData.position.y /= count;
-    avgMarkerData.position.z /= count;
-    avgMarkerData.rotation.x /= count;
-    avgMarkerData.rotation.y /= count;
-    avgMarkerData.rotation.z /= count;
-    avgMarkerData.scale.x /= count;
-    avgMarkerData.scale.y /= count;
-    avgMarkerData.scale.z /= count;
-
-    // Method 2: Calculate right direction manually
-    const offsetDistance = 2;
-
-    // Convert Y rotation to radians (Y rotation determines left/right)
-    const yRotationRad = avgMarkerData.rotation.y * (Math.PI / 180);
-
-    // Calculate right direction (90 degrees from forward)
-    // In A-Frame/Three.js: +X is right, +Z is forward (towards viewer)
-    const rightOffset = {
-      x: Math.cos(yRotationRad) * offsetDistance,
-      y: 0, // Keep same height
-      z: -Math.sin(yRotationRad) * offsetDistance,
-    };
-
-    console.log(`Marker Y rotation: ${avgMarkerData.rotation.y}°`);
-    console.log(
-      `Calculated offset: x=${rightOffset.x.toFixed(
-        2
-      )}, z=${rightOffset.z.toFixed(2)}`
-    );
-
-    const newRenderData: TRenderData = {
-      position: {
-        x: avgMarkerData.position.x + rightOffset.x,
-        y: avgMarkerData.position.y + rightOffset.y,
-        z: avgMarkerData.position.z + rightOffset.z,
-      },
-      rotation: avgMarkerData.rotation,
-      scale: avgMarkerData.scale,
-    };
-
-    this.renderObj.current.update(newRenderData);
-    RenderData.updateHtmlElement(
-      this.renderObj.current,
-      this.htmlElements.renderObj
-    );
   }
   private tickUpdateScreenCornerHtml(): void {
     if (this.debug.isDebugging) {

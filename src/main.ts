@@ -1,1 +1,3 @@
-console.log("Hello World");
+import SceneManager from "./models/SceneManager";
+
+new SceneManager(true);

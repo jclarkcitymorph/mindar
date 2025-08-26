@@ -9,6 +9,8 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.11",
+    "@types/aframe": "^1.2.8",
+    "@types/three": "^0.179.0",
     "gh-pages": "^6.3.0",
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
@@ -16,8 +18,11 @@
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
+    "aframe": "^1.7.1",
     "canvas": "^3.1.2",
+    "hls.js": "^1.6.11",
     "jsdom": "^26.1.0",
-    "mind-ar": "^1.2.2"
+    "mind-ar": "^1.2.5",
+    "three": "^0.179.1"
   }
 }

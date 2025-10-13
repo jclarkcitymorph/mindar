@@ -5,6 +5,6 @@ new SceneManager({
   isDebugging: false,
   renderTarget: new HlsVideoRenderTarget({
     videoUrl:
-      "https://reel-em-in-hls-bucket.s3-us-west-1.amazonaws.com/bab4eed3-a93e-4dff-ae47-6a29195f2a23/playlist.m3u8",
+      "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/23fa836c-65ea-47d2-80ee-10c01e2dc883/playlist.m3u8",
   }),
 });

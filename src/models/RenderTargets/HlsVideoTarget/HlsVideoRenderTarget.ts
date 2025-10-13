@@ -13,12 +13,14 @@ type THlsVideoRenderTargetInput = {
 };
 
 export default class HlsVideoRenderTarget implements RenderTarget {
+  private isPlaying: boolean;
   private renderData: RenderData;
   private vectorRotationLimits: TVector3Limits;
   private renderObj: Entity | undefined;
   private video: HTMLVideoElement | undefined;
   private videoUrl: string;
   constructor(input: THlsVideoRenderTargetInput) {
+    this.isPlaying = false;
     this.videoUrl = input.videoUrl;
     this.renderData = new RenderData();
     this.vectorRotationLimits = input.rotationLimit || defaultRotationLimits;
@@ -28,6 +30,7 @@ export default class HlsVideoRenderTarget implements RenderTarget {
       if (this.video === undefined)
         throw new Error("video asset must first be defined");
       if (Hls.isSupported()) {
+        console.log("HLS Supported");
         const hls = new Hls({
           debug: false,
           enableWorker: true,
@@ -44,6 +47,7 @@ export default class HlsVideoRenderTarget implements RenderTarget {
           console.error("HLS Error:", data);
         });
       } else if (this.video.canPlayType("application/vnd.apple.mpegurl")) {
+        console.log("HLS Not Supported");
         // Safari native HLS support
         this.video.src = this.videoUrl;
       }
@@ -60,6 +64,7 @@ export default class HlsVideoRenderTarget implements RenderTarget {
       video.setAttribute("muted", "true");
       video.setAttribute("playsinline", "true");
       video.setAttribute("loop", "true");
+      video.setAttribute("muted", "true");
       this.video = video;
     }
 
@@ -86,9 +91,18 @@ export default class HlsVideoRenderTarget implements RenderTarget {
       throw new Error(
         "Cannot call onFirstSeen() without initializing HlsVideoRenderTarget"
       );
-    this.video.play();
+
+    const playPromise = this.video.play();
+    playPromise
+      .then(() => {
+        this.isPlaying = true;
+      })
+      .catch((err) => {
+        console.log(JSON.stringify({ err }));
+      });
   }
   public onMarkerFound(): void {
+    console.log(JSON.stringify({ isPlaying: this.isPlaying }));
     return;
   }
   public onMarkerLost(): void {

@@ -1,5 +1,8 @@
+import { ModalOverlayDisclosure } from "./models/ModalOverlayDisclosure/ModalOverlayDisclosure";
 import HlsVideoRenderTarget from "./models/RenderTargets/HlsVideoTarget/HlsVideoRenderTarget";
 import SceneManager from "./models/SceneManager";
+
+new ModalOverlayDisclosure();
 
 new SceneManager({
   isDebugging: false,

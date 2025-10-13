@@ -1,0 +1,56 @@
+/* === modal-overlay.css === */
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  min-width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  background-color: black;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-overlay__container {
+  padding: 1em;
+  background-color: white;
+  border-radius: 10px;
+  text-align: center;
+  max-width: 90vw;
+}
+
+.modal-overlay__title {
+  font-size: 1.2em;
+  margin-bottom: 1em;
+  color: #111;
+}
+
+.modal-overlay__button {
+  background: linear-gradient(
+    158deg,
+    rgba(104, 155, 42, 1) 0%,
+    rgba(87, 199, 133, 1) 47%,
+    rgba(104, 237, 83, 1) 100%
+  );
+  border: none;
+  padding: 0.75em 2em;
+  border-radius: 10px;
+  color: white;
+  font-size: 1.5em;
+  cursor: pointer;
+  transition: background 0.8s ease, transform 0.3s ease;
+}
+
+/* Hover + active effects */
+.modal-overlay__button:hover {
+  background: linear-gradient(158deg,rgba(94, 133, 48, 1) 0%, rgba(92, 171, 125, 1) 47%, rgba(75, 179, 59, 1) 100%);
+}
+
+.modal-overlay__button:active {
+  transform: scale(0.97);
+}

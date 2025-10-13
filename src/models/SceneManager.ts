@@ -13,8 +13,6 @@ type TSceneHtmlElements = {
   scene: Scene;
   marker: Entity;
   camera: Entity;
-  renderObj: Entity;
-  video: HTMLVideoElement;
 };
 
 const { Vector3, Quaternion, Euler } = THREE;
@@ -65,10 +63,12 @@ export default class SceneManager {
       topLeft: new CornerRenderData(),
       topRight: new CornerRenderData(),
     };
+
     this.renderTarget = renderTarget;
 
     const { htmlElements, debug } = this.createScene(isDebugging);
-    (this.htmlElements = htmlElements), (this.debug = debug);
+    this.htmlElements = htmlElements;
+    this.debug = debug;
 
     AFRAME.registerComponent("frame-scene", {
       init: this.init.bind(this),
@@ -94,16 +94,9 @@ export default class SceneManager {
 
     const assets = document.createElement("a-assets");
 
-    const video = document.createElement("video");
-    video.setAttribute("id", "hls-video");
-    video.setAttribute("id", "hls-video");
-    video.setAttribute("preload", "metadata");
-    video.setAttribute("crossorigin", "anonymous");
-    video.setAttribute("muted", "true");
-    video.setAttribute("playsinline", "true");
-    video.setAttribute("loop", "true");
+    const assetChildren = this.renderTarget.createAssets();
 
-    assets.appendChild(video);
+    assetChildren?.forEach((child) => assets.appendChild(child));
 
     const camera = document.createElement("a-camera") as Entity;
     camera.setAttribute("position", "0 0 0");
@@ -113,15 +106,7 @@ export default class SceneManager {
     marker.setAttribute("id", "marker");
     marker.setAttribute("mindar-image-target", "targetIndex: 0");
 
-    const renderObj = document.createElement("a-plane") as Entity;
-    renderObj.setAttribute("id", "obj");
-    renderObj.setAttribute("position", "1000 1000 -10");
-    renderObj.setAttribute("rotation", "0 0 0");
-    renderObj.setAttribute("scale", "1 1 1");
-    renderObj.setAttribute("width", "1.6");
-    renderObj.setAttribute("height", ".9");
-    renderObj.setAttribute("visible", "true");
-    renderObj.setAttribute("material", "src: #hls-video; shader: flat;");
+    const renderObj = this.renderTarget.createAFrameElement();
 
     scene.appendChild(assets);
     scene.appendChild(camera);
@@ -131,9 +116,10 @@ export default class SceneManager {
     const htmlElements: TSceneHtmlElements = {
       camera,
       marker,
-      renderObj,
       scene,
-      video,
+    };
+    let debug: TDebug = {
+      isDebugging: false,
     };
 
     if (isDebugging) {
@@ -231,9 +217,8 @@ export default class SceneManager {
       scene.append(bottomRight);
 
       body.append(devTools);
-      body.append(scene);
 
-      const debug: TDebug = {
+      debug = {
         isDebugging: true,
         elements: {
           fps: {
@@ -259,16 +244,14 @@ export default class SceneManager {
         htmlElements,
         debug,
       };
-    } else {
-      this.debug.isDebugging = false;
-      body.append(scene);
-      return {
-        htmlElements,
-        debug: {
-          isDebugging: false,
-        },
-      };
     }
+
+    body.append(scene);
+
+    return {
+      htmlElements,
+      debug,
+    };
   }
 
   // LifeCycle Events
@@ -280,6 +263,7 @@ export default class SceneManager {
     }
   }
   private tick(time: number, _timeDelta: number) {
+    console.log("tick");
     this.fpsData.update(time);
     this.tickUpdateScreenCornerData();
     this.tickUpdateMarkerData();

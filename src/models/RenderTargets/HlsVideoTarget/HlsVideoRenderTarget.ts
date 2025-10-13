@@ -5,6 +5,7 @@ import type { TVector3Limits } from "../../../types/TVector3";
 import type { TRenderTargetUpdateData } from "../RenderTarget";
 import type { TRenderData } from "../../../types/TRenderData";
 import { clamp } from "three/src/math/MathUtils.js";
+import type { Entity } from "aframe";
 
 type THlsVideoRenderTargetInput = {
   videoUrl: string;
@@ -14,7 +15,7 @@ type THlsVideoRenderTargetInput = {
 export default class HlsVideoRenderTarget implements RenderTarget {
   private renderData: RenderData;
   private vectorRotationLimits: TVector3Limits;
-  private renderObj: HTMLElement | undefined;
+  private renderObj: Entity | undefined;
   private video: HTMLVideoElement | undefined;
   private videoUrl: string;
   constructor(input: THlsVideoRenderTargetInput) {
@@ -64,7 +65,7 @@ export default class HlsVideoRenderTarget implements RenderTarget {
 
     return [this.video];
   }
-  public createAFrameElement(): HTMLElement {
+  public createAFrameElement(): Entity {
     if (this.renderObj === undefined) {
       const renderObj = document.createElement("a-plane");
       renderObj.setAttribute("id", "obj");

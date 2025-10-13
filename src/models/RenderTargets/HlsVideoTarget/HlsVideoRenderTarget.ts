@@ -129,6 +129,10 @@ export default class HlsVideoRenderTarget implements RenderTarget {
     avgMarkerData.scale.y /= count;
     avgMarkerData.scale.z /= count;
 
+    avgMarkerData.scale.x *= 0.75;
+    avgMarkerData.scale.y *= 0.75;
+    avgMarkerData.scale.z *= 0.75;
+
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
       this.vectorRotationLimits.x.min || -360,

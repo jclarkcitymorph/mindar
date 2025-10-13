@@ -16,7 +16,7 @@ type TSceneHtmlElements = {
 };
 
 const { Vector3, Quaternion, Euler } = THREE;
-const HISTORICS_TO_TRACK = 30;
+const HISTORICS_TO_TRACK = 20;
 
 type TSceneManagerInput = {
   renderTarget: RenderTarget;
@@ -67,6 +67,7 @@ export default class SceneManager {
     this.renderTarget = renderTarget;
 
     const { htmlElements, debug } = this.createScene(isDebugging);
+
     this.htmlElements = htmlElements;
     this.debug = debug;
 
@@ -240,10 +241,6 @@ export default class SceneManager {
           showHideBtn: devToolsShowHideBtn,
         },
       };
-      return {
-        htmlElements,
-        debug,
-      };
     }
 
     body.append(scene);
@@ -263,7 +260,6 @@ export default class SceneManager {
     }
   }
   private tick(time: number, _timeDelta: number) {
-    console.log("tick");
     this.fpsData.update(time);
     this.tickUpdateScreenCornerData();
     this.tickUpdateMarkerData();

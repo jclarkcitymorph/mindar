@@ -1,6 +1,6 @@
-import { ModalOverlayDisclosure } from "./models/ModalOverlayDisclosure/ModalOverlayDisclosure";
+// import { ModalOverlayDisclosure } from "./models/ModalOverlayDisclosure/ModalOverlayDisclosure";
 import GltfModelRenderTarget from "./models/RenderTargets/GltfModelRenderTarget/GltfModelRenderTarget";
-import HlsVideoRenderTarget from "./models/RenderTargets/HlsVideoTarget/HlsVideoRenderTarget";
+// import HlsVideoRenderTarget from "./models/RenderTargets/HlsVideoTarget/HlsVideoRenderTarget";
 import SceneManager from "./models/SceneManager";
 
 // new ModalOverlayDisclosure();
@@ -14,9 +14,13 @@ import SceneManager from "./models/SceneManager";
 // });
 
 new SceneManager({
-  isDebugging: true,
+  isDebugging: false,
   renderTarget: new GltfModelRenderTarget({
     modelName: "ModelTarget",
     modelPath: "assets/testmodel.gltf",
+    markerDimensions: {
+      x: 1.6,
+      y: 0.9,
+    },
   }),
 });

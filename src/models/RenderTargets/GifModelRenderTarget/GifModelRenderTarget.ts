@@ -6,79 +6,69 @@ import type {
   TRenderTargetUpdateData,
 } from "../RenderTarget";
 import type { TRenderData } from "../../../types/TRenderData";
-import type { Entity } from "aframe";
 import { clamp } from "three/src/math/MathUtils.js";
+import type { Entity } from "aframe";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import type { TVector2 } from "../../../types/TVector2";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 
-type TGltfModelRenderTarget = {
-  modelName: string;
-  modelPath: string;
+type TGifRenderTargetInput = {
+  gifName: string;
+  gifPath: string;
+  drawableDimensions: TVector2;
 } & TRenderTargetConstructorInput;
 
-export default class GltfModelRenderTarget extends RenderTarget {
+export default class GifRenderTarget extends RenderTarget {
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
-  protected vectorRotationLimits: TVector3Limits;
-  protected renderData: RenderData;
   protected renderObj: Entity | undefined;
-  protected modelName: string;
-  protected modelPath: string;
+  protected renderData: RenderData;
+  protected vectorRotationLimits: TVector3Limits;
+  protected gifName: string;
+  protected gifPath: string;
+  protected drawableDimensions: TVector2;
 
-  constructor(input: TGltfModelRenderTarget) {
+  constructor(input: TGifRenderTargetInput) {
     super();
-    this.markerDimensions = input.markerDimensions;
-    this.positionalOffsetVector =
-      input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
-    this.modelName = input.modelName;
-    this.modelPath = input.modelPath;
-    this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
+    this.positionalOffsetVector =
+      input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
+    this.markerDimensions = input.markerDimensions;
+    this.gifName = input.gifName;
+    this.gifPath = input.gifPath;
+    this.drawableDimensions = input.drawableDimensions;
+    this.renderData = new RenderData();
   }
 
   public init(): Promise<void> {
     return new Promise((res, _rej) => {
-      const assetElement = document.getElementById(this.modelName);
-
-      if (!assetElement) {
-        console.error("Asset element not found:", this.modelName);
-        res();
-        return;
-      }
-
-      const setModelWhenReady = () => {
-        if (this.renderObj) {
-          this.renderObj.setAttribute("gltf-model", `#${this.modelName}`);
-        }
-        res();
-      };
-
-      if ((assetElement as any)["hasLoaded"]) {
-        setModelWhenReady();
-      } else {
-        assetElement.addEventListener("loaded", setModelWhenReady);
-      }
+      res();
     });
   }
 
-  public createAssets() {
-    const asset = document.createElement("a-asset-item");
-    asset.setAttribute("id", this.modelName);
-    asset.setAttribute("src", this.modelPath);
-    asset.setAttribute("response-type", "arraybuffer");
-    return [asset];
+  public createAssets(): Array<HTMLImageElement> {
+    const img = document.createElement("img");
+    img.setAttribute("id", this.gifName);
+    img.setAttribute("src", this.gifPath);
+    img.setAttribute("crossorigin", "anonymous");
+    return [img];
   }
 
   public createAFrameElement(): Entity {
     if (this.renderObj === undefined) {
-      const renderObj = document.createElement("a-entity") as Entity;
-      renderObj.setAttribute("id", "gltf-obj");
-      renderObj.setAttribute("position", "0 0 0");
+      const renderObj = document.createElement("a-plane") as Entity;
+      renderObj.setAttribute("id", "gif-obj");
+      renderObj.setAttribute("position", "1000 1000 -10");
       renderObj.setAttribute("rotation", "0 0 0");
-      renderObj.setAttribute("scale", "0 0 0");
-      renderObj.setAttribute("visible", "false");
+      renderObj.setAttribute("scale", "1 1 1");
+      renderObj.setAttribute("width", this.drawableDimensions.x.toString());
+      renderObj.setAttribute("height", this.drawableDimensions.y.toString());
+      renderObj.setAttribute("visible", "true");
+      renderObj.setAttribute(
+        "material",
+        `src: #${this.gifName}; shader: flat;`
+      );
       this.renderObj = renderObj;
     }
 
@@ -86,7 +76,6 @@ export default class GltfModelRenderTarget extends RenderTarget {
   }
 
   public onFirstSeen(): void {
-    this.renderObj?.setAttribute("visible", "true");
     return;
   }
 
@@ -101,9 +90,10 @@ export default class GltfModelRenderTarget extends RenderTarget {
   public tickUpdate(data: TRenderTargetUpdateData): void {
     if (this.renderObj === undefined) {
       throw new Error(
-        "tickUpdate called in GltfModelRenderTarget before renderObj initialized"
+        "tickUpdate called in GifRenderTarget before renderObj initialized"
       );
     }
+
     const avgMarkerData: TRenderData = data.marker.historic.reduce(
       (prev, curr) => {
         prev.position.x += curr.position.x;
@@ -123,6 +113,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
         scale: { x: 0, y: 0, z: 0 },
       } as TRenderData
     );
+
     const count = data.marker.historic.length;
     avgMarkerData.position.x /= count;
     avgMarkerData.position.y /= count;
@@ -133,9 +124,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
     avgMarkerData.scale.x /= count;
     avgMarkerData.scale.y /= count;
     avgMarkerData.scale.z /= count;
-    avgMarkerData.scale.x *= 0.75;
-    avgMarkerData.scale.y *= 0.75;
-    avgMarkerData.scale.z *= 0.75;
+
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
       this.vectorRotationLimits.x.min ?? -360,
@@ -151,6 +140,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
       this.vectorRotationLimits.z.min ?? -360,
       this.vectorRotationLimits.z.max ?? 360
     );
+
     this.renderData.update(avgMarkerData);
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
   }

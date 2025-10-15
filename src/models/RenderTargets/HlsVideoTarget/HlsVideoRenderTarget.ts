@@ -1,29 +1,39 @@
+import type { TVector3, TVector3Limits } from "../../../types/TVector3";
+import type {
+  TRenderTargetConstructorInput,
+  TRenderTargetUpdateData,
+} from "../RenderTarget";
+import type { TRenderData } from "../../../types/TRenderData";
+import type { Entity } from "aframe";
+import type { TVector2 } from "../../../types/TVector2";
 import Hls from "hls.js";
 import RenderTarget from "../RenderTarget";
 import RenderData from "../../RenderData";
-import type { TVector3Limits } from "../../../types/TVector3";
-import type { TRenderTargetUpdateData } from "../RenderTarget";
-import type { TRenderData } from "../../../types/TRenderData";
 import { clamp } from "three/src/math/MathUtils.js";
-import type { Entity } from "aframe";
+import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
+import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 
 type THlsVideoRenderTargetInput = {
   videoUrl: string;
-  rotationLimit?: TVector3Limits;
-};
+} & TRenderTargetConstructorInput;
 
-export default class HlsVideoRenderTarget implements RenderTarget {
-  private isPlaying: boolean;
-  private renderData: RenderData;
-  private vectorRotationLimits: TVector3Limits;
-  private renderObj: Entity | undefined;
-  private video: HTMLVideoElement | undefined;
-  private videoUrl: string;
+export default class HlsVideoRenderTarget extends RenderTarget {
+  protected markerDimensions: TVector2;
+  protected positionalOffsetVector: TVector3;
+  protected renderData: RenderData;
+  protected vectorRotationLimits: TVector3Limits;
+  protected renderObj: Entity | undefined;
+  protected video: HTMLVideoElement | undefined;
+  protected videoUrl: string;
   constructor(input: THlsVideoRenderTargetInput) {
-    this.isPlaying = false;
-    this.videoUrl = input.videoUrl;
+    super();
+    this.markerDimensions = input.markerDimensions;
+    this.positionalOffsetVector =
+      input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
     this.renderData = new RenderData();
-    this.vectorRotationLimits = input.rotationLimit || defaultRotationLimits;
+    this.vectorRotationLimits =
+      input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
+    this.videoUrl = input.videoUrl;
   }
   public init(): Promise<void> {
     return new Promise((res, _rej) => {
@@ -91,14 +101,7 @@ export default class HlsVideoRenderTarget implements RenderTarget {
         "Cannot call onFirstSeen() without initializing HlsVideoRenderTarget"
       );
 
-    const playPromise = this.video.play();
-    playPromise
-      .then(() => {
-        this.isPlaying = true;
-      })
-      .catch((err) => {
-        console.log(JSON.stringify({ err }));
-      });
+    this.video.play();
   }
   public onMarkerFound(): void {
     return;
@@ -166,18 +169,3 @@ export default class HlsVideoRenderTarget implements RenderTarget {
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
   }
 }
-
-const defaultRotationLimits: TVector3Limits = {
-  x: {
-    min: -5,
-    max: 5,
-  },
-  y: {
-    min: -5,
-    max: 5,
-  },
-  z: {
-    min: -15,
-    max: 15,
-  },
-};

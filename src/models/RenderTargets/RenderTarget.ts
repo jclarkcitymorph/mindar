@@ -1,6 +1,10 @@
+import type { Entity } from "aframe";
 import type { TCorners } from "../../types/TCorners";
 import type { TRenderData } from "../../types/TRenderData";
+import type { TVector2 } from "../../types/TVector2";
+import type { TVector3, TVector3Limits } from "../../types/TVector3";
 import type CornerRenderData from "../CornerRenderData";
+import type RenderData from "../RenderData";
 const { Vector3, Quaternion, Euler } = THREE;
 // Abstracted goal of this is to have different types of render targets with abstract methods for how to handle them within the scene
 type TRenderTargetUpdateData = {
@@ -18,42 +22,25 @@ type TRenderTargetUpdateData = {
   corners: Record<TCorners, CornerRenderData>;
 };
 
-export default class RenderTarget {
-  public async init(): Promise<void> {
-    throw new Error(
-      "Instance of Render target called init() without implementation"
-    );
-  }
-  public createAFrameElement(): HTMLElement {
-    throw new Error(
-      "Instance of Render target called createHtmlAFrame() without implementation"
-    );
-  }
-  public createAssets(): Array<HTMLElement> | undefined {
-    throw new Error(
-      "Instance of Render target called createAssets() without implementation"
-    );
-  }
-  public onFirstSeen(): void {
-    throw new Error(
-      "Instance of Render target called onFirstSeen() without implementation"
-    );
-  }
-  public onMarkerLost(_data: TRenderTargetUpdateData): void {
-    throw new Error(
-      "Instance of Render target called onMarkerLost() without implementation"
-    );
-  }
-  public onMarkerFound(_data: TRenderTargetUpdateData): void {
-    throw new Error(
-      "Instance of Render target called onMarkerFound() without implementation"
-    );
-  }
-  public tickUpdate(_data: TRenderTargetUpdateData): void {
-    throw new Error(
-      "Instance of Render target called tickUpdate() without implementation"
-    );
-  }
+export type TRenderTargetConstructorInput = {
+  markerDimensions: TVector2;
+  positionalOffsetVector?: TVector3;
+  vectorRotationLimits?: TVector3Limits;
+};
+
+export default abstract class RenderTarget {
+  protected abstract markerDimensions: TVector2;
+  protected abstract positionalOffsetVector: TVector3;
+  protected abstract renderData: RenderData;
+  protected abstract renderObj: Entity | undefined;
+
+  public abstract init(): Promise<void>;
+  public abstract createAFrameElement(): HTMLElement;
+  public abstract createAssets(): Array<HTMLElement> | undefined;
+  public abstract onFirstSeen(): void;
+  public abstract onMarkerLost(_data: TRenderTargetUpdateData): void;
+  public abstract onMarkerFound(_data: TRenderTargetUpdateData): void;
+  public abstract tickUpdate(_data: TRenderTargetUpdateData): void;
 }
 
 export type { TRenderTargetUpdateData };

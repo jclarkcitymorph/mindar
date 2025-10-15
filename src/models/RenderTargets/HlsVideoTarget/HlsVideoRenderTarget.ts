@@ -58,7 +58,6 @@ export default class HlsVideoRenderTarget implements RenderTarget {
     if (this.video === undefined) {
       const video = document.createElement("video");
       video.setAttribute("id", "hls-video");
-      video.setAttribute("id", "hls-video");
       video.setAttribute("preload", "metadata");
       video.setAttribute("crossorigin", "anonymous");
       video.setAttribute("muted", "true");

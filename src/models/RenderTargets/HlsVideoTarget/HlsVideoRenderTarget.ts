@@ -101,7 +101,6 @@ export default class HlsVideoRenderTarget implements RenderTarget {
       });
   }
   public onMarkerFound(): void {
-    console.log(JSON.stringify({ isPlaying: this.isPlaying }));
     return;
   }
   public onMarkerLost(): void {

@@ -16,7 +16,7 @@ type TSceneHtmlElements = {
 };
 
 const { Vector3, Quaternion, Euler } = THREE;
-const HISTORICS_TO_TRACK = 20;
+const HISTORICS_TO_TRACK = 12;
 
 type TSceneManagerInput = {
   renderTarget: RenderTarget;

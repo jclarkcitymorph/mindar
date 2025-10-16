@@ -25,12 +25,14 @@ type TRenderTargetUpdateData = {
 export type TRenderTargetConstructorInput = {
   markerDimensions: TVector2;
   positionalOffsetVector?: TVector3;
+  scaleMultiplierVector?: TVector3;
   vectorRotationLimits?: TVector3Limits;
 };
 
 export default abstract class RenderTarget {
   protected abstract markerDimensions: TVector2;
   protected abstract positionalOffsetVector: TVector3;
+  protected abstract scaleVector: TVector3;
   protected abstract renderData: RenderData;
   protected abstract renderObj: Entity | undefined;
 

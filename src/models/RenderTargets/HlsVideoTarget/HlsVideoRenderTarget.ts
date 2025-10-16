@@ -12,6 +12,7 @@ import RenderData from "../../RenderData";
 import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
+import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 
 type THlsVideoRenderTargetInput = {
   videoUrl: string;
@@ -20,6 +21,7 @@ type THlsVideoRenderTargetInput = {
 export default class HlsVideoRenderTarget extends RenderTarget {
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
+  protected scaleMultiplierVector: TVector3;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
   protected renderObj: Entity | undefined;
@@ -27,6 +29,8 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   protected videoUrl: string;
   constructor(input: THlsVideoRenderTargetInput) {
     super();
+    this.scaleMultiplierVector =
+      input.scaleMultiplierVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
     this.markerDimensions = input.markerDimensions;
     this.positionalOffsetVector =
       input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;

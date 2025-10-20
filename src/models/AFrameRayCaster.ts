@@ -1,5 +1,5 @@
 import type { Entity } from "aframe";
-import type { Camera, Intersection } from "three";
+import type { Camera } from "three";
 import type RenderTarget from "./RenderTargets/RenderTarget";
 
 type TAFrameRayCasterInput = {
@@ -55,22 +55,11 @@ export default class AFrameRayCaster {
           );
 
           if (intersects.length > 0) {
-            console.log("Hit detected on:", target);
-            this.handleTargetClick(target, intersects[0]);
-            alert("hit detected on");
-            break; // Stop after first hit
+            target.onClick();
+            break;
           }
         }
       }
     });
-  }
-
-  private handleTargetClick(
-    target: RenderTarget,
-    intersection: Intersection
-  ): void {
-    console.log("Clicked render target:", target);
-    console.log("Intersection point:", intersection.point);
-    // Handle the click
   }
 }

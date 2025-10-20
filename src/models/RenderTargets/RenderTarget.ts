@@ -47,6 +47,7 @@ export default abstract class RenderTarget {
   public abstract onMarkerFound(_data: TRenderTargetUpdateData): void;
   public abstract tickUpdate(_data: TRenderTargetUpdateData): void;
   public abstract getRenderObj(): Entity | undefined;
+  public abstract onClick(): void;
 }
 
 export type { TRenderTargetUpdateData };

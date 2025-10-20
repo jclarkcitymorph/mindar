@@ -14,6 +14,18 @@ import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 
+type THlsOnClickInput = {
+  markerDimensions?: TVector2;
+  positionalOffsetVector?: TVector3;
+  scaleVector?: TVector3;
+  renderData?: RenderData;
+  vectorRotationLimits?: TVector3Limits;
+  renderObj?: Entity | undefined;
+  video?: HTMLVideoElement | undefined;
+  videoUrl?: string;
+  imageUrl?: string;
+};
+
 type THlsVideoRenderTargetInput = {
   videoUrl: string;
 } & TRenderTargetConstructorInput;
@@ -28,6 +40,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   protected renderObj: Entity | undefined;
   protected video: HTMLVideoElement | undefined;
   protected videoUrl: string;
+  protected onClickHandler: ((input: THlsOnClickInput) => void) | undefined;
   constructor(input: THlsVideoRenderTargetInput) {
     super();
     this.name = input.name;
@@ -109,22 +122,71 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   public onMarkerLost(): void {
     return;
   }
+  public onClick(): void {
+    if (this.onClickHandler) {
+      this.onClickHandler({
+        markerDimensions: this.markerDimensions,
+        positionalOffsetVector: this.positionalOffsetVector,
+        video: this.video,
+        renderData: this.renderData,
+        renderObj: this.renderObj,
+        scaleVector: this.scaleVector,
+        vectorRotationLimits: this.vectorRotationLimits,
+        videoUrl: this.videoUrl,
+      });
+    }
+  }
   public tickUpdate(data: TRenderTargetUpdateData): void {
     if (this.renderObj === undefined) {
       throw new Error(
-        "tickUpdate called in GltfModelRenderTarget before renderObj initialized"
+        "tickUpdate called in HlsVideoRenderTarget before renderObj initialized"
       );
     }
 
-    // Grab Average Data
+    // Use averaged data for stability
     const avgMarkerData = JSON.parse(
       JSON.stringify(data.marker.average)
     ) as TRenderData;
 
-    // Apply Scale
-    avgMarkerData.scale.x *= this.scaleVector.x;
-    avgMarkerData.scale.y *= this.scaleVector.y;
-    avgMarkerData.scale.z *= this.scaleVector.z;
+    // Convert averaged rotation back to quaternion for proper matrix composition
+    const avgQuaternion = new THREE.Quaternion();
+    const avgEuler = new THREE.Euler(
+      (avgMarkerData.rotation.x * Math.PI) / 180,
+      (avgMarkerData.rotation.y * Math.PI) / 180,
+      (avgMarkerData.rotation.z * Math.PI) / 180,
+      "XYZ"
+    );
+    avgQuaternion.setFromEuler(avgEuler);
+
+    // Convert averaged position and scale to THREE.js vectors
+    const avgPosition = new THREE.Vector3(
+      avgMarkerData.position.x,
+      avgMarkerData.position.y,
+      avgMarkerData.position.z
+    );
+    // Use unit scale for z-axis since marker is flat (z-scale is near 0)
+    // This prevents degenerate matrix issues
+    const avgScale = new THREE.Vector3(
+      avgMarkerData.scale.x,
+      avgMarkerData.scale.y,
+      1.0
+    );
+
+    // Create the marker's world transformation matrix from averaged data
+    const markerMatrix = new THREE.Matrix4();
+    markerMatrix.compose(avgPosition, avgQuaternion, avgScale);
+
+    // Define the local offset position (in marker's local space)
+    // Note: Z offset should NOT be scaled by marker scale since marker is flat (z-scale ≈ 0)
+    const localPosition = new THREE.Vector3(
+      (this.markerDimensions.x / 2) * this.positionalOffsetVector.x,
+      (this.markerDimensions.y / 2) * this.positionalOffsetVector.y,
+      this.positionalOffsetVector.z
+    );
+
+    // Transform the local position to world space using the marker's matrix
+    // This handles rotation and position, but we need to handle z-offset separately
+    const worldPosition = localPosition.applyMatrix4(markerMatrix);
 
     // Clamp Rotations
     avgMarkerData.rotation.x = clamp(
@@ -143,37 +205,21 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       this.vectorRotationLimits.z.max ?? 360
     );
 
-    // Calculate the local offset (in marker's local space)
-    const localOffset = new THREE.Vector3(
-      (this.markerDimensions.x / 2) *
-        this.positionalOffsetVector.x *
-        avgMarkerData.scale.x,
-      (this.markerDimensions.y / 2) *
-        this.positionalOffsetVector.y *
-        avgMarkerData.scale.y,
-      1 * this.positionalOffsetVector.z * avgMarkerData.scale.z
-    );
-
-    // Rotate the offset by the marker's rotation
-    const euler = new THREE.Euler(
-      (avgMarkerData.rotation.x * Math.PI) / 180,
-      (avgMarkerData.rotation.y * Math.PI) / 180,
-      (avgMarkerData.rotation.z * Math.PI) / 180,
-      "XYZ" // Adjust rotation order if needed
-    );
-    localOffset.applyEuler(euler);
-
-    // Apply the rotated offset to the marker's position
-    const finalPosition: TVector3 = {
-      x: avgMarkerData.position.x + localOffset.x,
-      y: avgMarkerData.position.y + localOffset.y,
-      z: avgMarkerData.position.z + localOffset.z,
+    // Apply scale multiplier
+    const finalScale = {
+      x: avgMarkerData.scale.x * this.scaleVector.x,
+      y: avgMarkerData.scale.y * this.scaleVector.y,
+      z: avgMarkerData.scale.z * this.scaleVector.z,
     };
 
     this.renderData.update({
-      position: finalPosition,
+      position: {
+        x: worldPosition.x,
+        y: worldPosition.y,
+        z: worldPosition.z,
+      },
       rotation: avgMarkerData.rotation,
-      scale: avgMarkerData.scale,
+      scale: finalScale,
     });
 
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
@@ -183,5 +229,10 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   }
   public getVideoObj(): HTMLVideoElement | undefined {
     return this.video;
+  }
+  public setOnClickVideoHandler(
+    func: ((input: THlsOnClickInput) => void) | undefined
+  ) {
+    this.onClickHandler = func;
   }
 }

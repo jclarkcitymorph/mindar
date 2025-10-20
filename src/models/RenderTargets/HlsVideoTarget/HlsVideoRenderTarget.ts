@@ -21,7 +21,7 @@ type THlsVideoRenderTargetInput = {
 export default class HlsVideoRenderTarget extends RenderTarget {
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
-  protected scaleMultiplierVector: TVector3;
+  protected scaleVector: TVector3;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
   protected renderObj: Entity | undefined;
@@ -29,8 +29,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   protected videoUrl: string;
   constructor(input: THlsVideoRenderTargetInput) {
     super();
-    this.scaleMultiplierVector =
-      input.scaleMultiplierVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
+    this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
     this.markerDimensions = input.markerDimensions;
     this.positionalOffsetVector =
       input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
@@ -118,39 +117,13 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       throw new Error(
         "tickUpdate called in HlsVideoRenderTarget before video or renderObj initialized"
       );
-    const avgMarkerData: TRenderData = data.marker.historic.reduce(
-      (prev, curr) => {
-        prev.position.x += curr.position.x;
-        prev.position.y += curr.position.y;
-        prev.position.z += curr.position.z;
-        prev.rotation.x += curr.rotation.x;
-        prev.rotation.y += curr.rotation.y;
-        prev.rotation.z += curr.rotation.z;
-        prev.scale.x += curr.scale.x;
-        prev.scale.y += curr.scale.y;
-        prev.scale.z += curr.scale.z;
-        return prev;
-      },
-      {
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 0, y: 0, z: 0 },
-      } as TRenderData
-    );
-    const count = data.marker.historic.length;
-    avgMarkerData.position.x /= count;
-    avgMarkerData.position.y /= count;
-    avgMarkerData.position.z /= count;
-    avgMarkerData.rotation.x /= count;
-    avgMarkerData.rotation.y /= count;
-    avgMarkerData.rotation.z /= count;
-    avgMarkerData.scale.x /= count;
-    avgMarkerData.scale.y /= count;
-    avgMarkerData.scale.z /= count;
+    const avgMarkerData = JSON.parse(
+      JSON.stringify(data.marker.average)
+    ) as TRenderData;
 
-    avgMarkerData.scale.x *= 0.75;
-    avgMarkerData.scale.y *= 0.75;
-    avgMarkerData.scale.z *= 0.75;
+    avgMarkerData.scale.x *= this.scaleVector.x;
+    avgMarkerData.scale.y *= this.scaleVector.y;
+    avgMarkerData.scale.z *= this.scaleVector.z;
 
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,

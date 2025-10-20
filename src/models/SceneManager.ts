@@ -19,7 +19,7 @@ const { Vector3, Quaternion, Euler } = THREE;
 const HISTORICS_TO_TRACK = 12;
 
 type TSceneManagerInput = {
-  renderTarget: RenderTarget;
+  renderTargets: RenderTarget[];
   isDebugging: boolean;
 };
 
@@ -38,10 +38,11 @@ export default class SceneManager {
       euler: InstanceType<typeof Euler>;
     };
     historic: Array<TRenderData>;
+    average: TRenderData;
   };
   private cornerData: Record<TCorners, CornerRenderData>;
-  private renderTarget: RenderTarget;
-  constructor({ renderTarget, isDebugging }: TSceneManagerInput) {
+  private renderTargets: RenderTarget[];
+  constructor({ renderTargets, isDebugging }: TSceneManagerInput) {
     this.flags = {
       sceneStarted: false,
     };
@@ -56,6 +57,23 @@ export default class SceneManager {
         euler: new Euler(),
       },
       historic: [],
+      average: {
+        position: {
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+        rotation: {
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+        scale: {
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+      },
     };
     this.cornerData = {
       bottomLeft: new CornerRenderData(),
@@ -64,7 +82,7 @@ export default class SceneManager {
       topRight: new CornerRenderData(),
     };
 
-    this.renderTarget = renderTarget;
+    this.renderTargets = [...renderTargets];
 
     const { htmlElements, debug } = this.createScene(isDebugging);
 
@@ -95,7 +113,10 @@ export default class SceneManager {
 
     const assets = document.createElement("a-assets");
 
-    const assetChildren = this.renderTarget.createAssets();
+    const assetChildren = this.renderTargets
+      .map((t) => t.createAssets())
+      .flat()
+      .filter((t) => t !== undefined);
 
     assetChildren?.forEach((child) => assets.appendChild(child));
 
@@ -107,12 +128,12 @@ export default class SceneManager {
     marker.setAttribute("id", "marker");
     marker.setAttribute("mindar-image-target", "targetIndex: 0");
 
-    const renderObj = this.renderTarget.createAFrameElement();
+    const renderObjs = this.renderTargets.map((t) => t.createAFrameElement());
 
     scene.appendChild(assets);
     scene.appendChild(camera);
     scene.appendChild(marker);
-    scene.appendChild(renderObj);
+    renderObjs.forEach((obj) => scene.appendChild(obj));
 
     const htmlElements: TSceneHtmlElements = {
       camera,
@@ -253,7 +274,7 @@ export default class SceneManager {
 
   // LifeCycle Events
   private init() {
-    this.renderTarget.init();
+    this.renderTargets.forEach((t) => t.init());
     this.registerArEvents();
     if (this.debug.isDebugging) {
       this.registerDevToolEvents();
@@ -268,10 +289,9 @@ export default class SceneManager {
     this.tickUpdateDevToolsFpsCounter();
     this.tickUpdateDevToolsMarkerDisplay();
     // Render Target Update
-    this.renderTarget.tickUpdate({
-      marker: this.markerData,
-      corners: this.cornerData,
-    });
+    this.renderTargets.forEach((t) =>
+      t.tickUpdate({ corners: this.cornerData, marker: this.markerData })
+    );
   }
 
   // Init Calls
@@ -299,17 +319,18 @@ export default class SceneManager {
       this.markerData.found = true;
       if (!this.flags.sceneStarted) {
         this.flags.sceneStarted = true;
-        this.renderTarget.onFirstSeen();
+        this.renderTargets.forEach((t) => t.onFirstSeen());
         document.querySelector(".mindar-ui-scanning")?.remove();
       }
       if (this.debug.isDebugging) {
         this.debug.elements.fps.foundMarker.textContent = "Marker Found";
         this.debug.elements.fps.foundMarker.setAttribute("data-status", "good");
       }
-      this.renderTarget.onMarkerFound({
+      const data = {
         marker: this.markerData,
         corners: this.cornerData,
-      });
+      };
+      this.renderTargets.forEach((t) => t.onMarkerFound(data));
     });
     marker.addEventListener("targetLost", () => {
       this.markerData.found = false;
@@ -317,10 +338,11 @@ export default class SceneManager {
         this.debug.elements.fps.foundMarker.textContent = "Marker Lost";
         this.debug.elements.fps.foundMarker.setAttribute("data-status", "bad");
       }
-      this.renderTarget.onMarkerLost({
+      const data = {
         marker: this.markerData,
         corners: this.cornerData,
-      });
+      };
+      this.renderTargets.forEach((t) => t.onMarkerLost(data));
     });
   }
   private syncCameraProperties() {
@@ -370,6 +392,38 @@ export default class SceneManager {
           -HISTORICS_TO_TRACK,
           this.markerData.historic.length
         );
+      }
+      if (this.markerData.historic.length > 0) {
+        const avgMarkerData: TRenderData = this.markerData.historic.reduce(
+          (prev, curr) => {
+            prev.position.x += curr.position.x;
+            prev.position.y += curr.position.y;
+            prev.position.z += curr.position.z;
+            prev.rotation.x += curr.rotation.x;
+            prev.rotation.y += curr.rotation.y;
+            prev.rotation.z += curr.rotation.z;
+            prev.scale.x += curr.scale.x;
+            prev.scale.y += curr.scale.y;
+            prev.scale.z += curr.scale.z;
+            return prev;
+          },
+          {
+            position: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 0, y: 0, z: 0 },
+          } as TRenderData
+        );
+        const count = this.markerData.historic.length;
+        avgMarkerData.position.x /= count;
+        avgMarkerData.position.y /= count;
+        avgMarkerData.position.z /= count;
+        avgMarkerData.rotation.x /= count;
+        avgMarkerData.rotation.y /= count;
+        avgMarkerData.rotation.z /= count;
+        avgMarkerData.scale.x /= count;
+        avgMarkerData.scale.y /= count;
+        avgMarkerData.scale.z /= count;
+        this.markerData.average = avgMarkerData;
       }
     }
   }
@@ -440,9 +494,28 @@ export default class SceneManager {
           1
         )}, z: ${this.markerData.current.scale.z.toFixed(1)}}`;
       } else {
-        position.textContent = `Pos: {x: ???, y: ???, z: ???}`;
-        rotation.textContent = `Rot: {x: ???°, y: ???°, z: ???°}`;
-        scale.textContent = `Scl: {x: ???, y: ???, z: ???}`;
+        const lastKnown = this.markerData.historic[0];
+        if (lastKnown) {
+          position.textContent = `Pos: {x: ${lastKnown.position.x.toFixed(
+            1
+          )}, y: ${lastKnown.position.y.toFixed(
+            1
+          )}, z: ${lastKnown.position.z.toFixed(1)}}`;
+          rotation.textContent = `Rot: {x: ${lastKnown.rotation.x.toFixed(
+            1
+          )}°, y: ${lastKnown.rotation.y.toFixed(
+            1
+          )}°, z: ${lastKnown.rotation.z.toFixed(1)}°}`;
+          scale.textContent = `Scl: {x: ${lastKnown.scale.x.toFixed(
+            1
+          )}, y: ${lastKnown.scale.y.toFixed(
+            1
+          )}, z: ${lastKnown.scale.z.toFixed(1)}}`;
+        } else {
+          position.textContent = `Pos: {x: ???, y: ???, z: ???}`;
+          rotation.textContent = `Rot: {x: ???°, y: ???°, z: ???°}`;
+          scale.textContent = `Scl: {x: ???, y: ???, z: ???}`;
+        }
       }
     }
   }

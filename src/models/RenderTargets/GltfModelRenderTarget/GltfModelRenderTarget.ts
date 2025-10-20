@@ -11,6 +11,7 @@ import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import type { TVector2 } from "../../../types/TVector2";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
+import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 
 type TGltfModelRenderTarget = {
   modelName: string;
@@ -20,6 +21,7 @@ type TGltfModelRenderTarget = {
 export default class GltfModelRenderTarget extends RenderTarget {
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
+  protected scaleVector: TVector3;
   protected vectorRotationLimits: TVector3Limits;
   protected renderData: RenderData;
   protected renderObj: Entity | undefined;
@@ -36,6 +38,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
     this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
+    this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
   }
 
   public init(): Promise<void> {
@@ -104,38 +107,18 @@ export default class GltfModelRenderTarget extends RenderTarget {
         "tickUpdate called in GltfModelRenderTarget before renderObj initialized"
       );
     }
-    const avgMarkerData: TRenderData = data.marker.historic.reduce(
-      (prev, curr) => {
-        prev.position.x += curr.position.x;
-        prev.position.y += curr.position.y;
-        prev.position.z += curr.position.z;
-        prev.rotation.x += curr.rotation.x;
-        prev.rotation.y += curr.rotation.y;
-        prev.rotation.z += curr.rotation.z;
-        prev.scale.x += curr.scale.x;
-        prev.scale.y += curr.scale.y;
-        prev.scale.z += curr.scale.z;
-        return prev;
-      },
-      {
-        position: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 0, y: 0, z: 0 },
-      } as TRenderData
-    );
-    const count = data.marker.historic.length;
-    avgMarkerData.position.x /= count;
-    avgMarkerData.position.y /= count;
-    avgMarkerData.position.z /= count;
-    avgMarkerData.rotation.x /= count;
-    avgMarkerData.rotation.y /= count;
-    avgMarkerData.rotation.z /= count;
-    avgMarkerData.scale.x /= count;
-    avgMarkerData.scale.y /= count;
-    avgMarkerData.scale.z /= count;
-    avgMarkerData.scale.x *= 0.75;
-    avgMarkerData.scale.y *= 0.75;
-    avgMarkerData.scale.z *= 0.75;
+
+    // Grab Average Data
+    const avgMarkerData = JSON.parse(
+      JSON.stringify(data.marker.average)
+    ) as TRenderData;
+
+    // Apply Scale
+    avgMarkerData.scale.x *= this.scaleVector.x;
+    avgMarkerData.scale.y *= this.scaleVector.y;
+    avgMarkerData.scale.z *= this.scaleVector.z;
+
+    // Clamp Rotations
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
       this.vectorRotationLimits.x.min ?? -360,
@@ -151,7 +134,38 @@ export default class GltfModelRenderTarget extends RenderTarget {
       this.vectorRotationLimits.z.min ?? -360,
       this.vectorRotationLimits.z.max ?? 360
     );
+
+    const rotatedOffset = this.rotateVectorWithThree(
+      this.positionalOffsetVector,
+      avgMarkerData.rotation
+    );
+
+    // Add the rotated offset to the parent's position
+    avgMarkerData.position.x += rotatedOffset.x;
+    avgMarkerData.position.y += rotatedOffset.y;
+    avgMarkerData.position.z += rotatedOffset.z;
+
     this.renderData.update(avgMarkerData);
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
+  }
+  private rotateVectorWithThree(
+    vector: TVector3,
+    rotation: TVector3
+  ): TVector3 {
+    // Create Three.js Vector3 from offset
+    const vec = new THREE.Vector3(vector.x, vector.y, vector.z);
+
+    // Create Euler rotation (assuming degrees, convert to radians)
+    const euler = new THREE.Euler(
+      (rotation.x * Math.PI) / 180,
+      (rotation.y * Math.PI) / 180,
+      (rotation.z * Math.PI) / 180,
+      "XYZ" // Rotation order - adjust if needed (XYZ, YXZ, ZXY, ZYX, YZX, XZY)
+    );
+
+    // Apply rotation to the vector
+    vec.applyEuler(euler);
+
+    return { x: vec.x, y: vec.y, z: vec.z };
   }
 }

@@ -18,6 +18,7 @@ type TRenderTargetUpdateData = {
       euler: InstanceType<typeof Euler>;
     };
     historic: Array<TRenderData>;
+    average: TRenderData;
   };
   corners: Record<TCorners, CornerRenderData>;
 };
@@ -25,7 +26,7 @@ type TRenderTargetUpdateData = {
 export type TRenderTargetConstructorInput = {
   markerDimensions: TVector2;
   positionalOffsetVector?: TVector3;
-  scaleMultiplierVector?: TVector3;
+  scaleVector?: TVector3;
   vectorRotationLimits?: TVector3Limits;
 };
 

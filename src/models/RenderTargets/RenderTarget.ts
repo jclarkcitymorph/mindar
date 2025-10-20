@@ -24,6 +24,7 @@ type TRenderTargetUpdateData = {
 };
 
 export type TRenderTargetConstructorInput = {
+  name: string;
   markerDimensions: TVector2;
   positionalOffsetVector?: TVector3;
   scaleVector?: TVector3;
@@ -31,6 +32,7 @@ export type TRenderTargetConstructorInput = {
 };
 
 export default abstract class RenderTarget {
+  protected abstract name: string;
   protected abstract markerDimensions: TVector2;
   protected abstract positionalOffsetVector: TVector3;
   protected abstract scaleVector: TVector3;
@@ -44,6 +46,7 @@ export default abstract class RenderTarget {
   public abstract onMarkerLost(_data: TRenderTargetUpdateData): void;
   public abstract onMarkerFound(_data: TRenderTargetUpdateData): void;
   public abstract tickUpdate(_data: TRenderTargetUpdateData): void;
+  public abstract getRenderObj(): Entity | undefined;
 }
 
 export type { TRenderTargetUpdateData };

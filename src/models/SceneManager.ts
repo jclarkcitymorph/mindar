@@ -8,6 +8,7 @@ import type { TRenderData } from "../types/TRenderData";
 import CornerRenderData from "./CornerRenderData";
 import FpsData from "./FpsData";
 import type RenderTarget from "./RenderTargets/RenderTarget";
+import AFrameRayCaster from "./AFrameRayCaster";
 
 type TSceneHtmlElements = {
   scene: Scene;
@@ -42,6 +43,7 @@ export default class SceneManager {
   };
   private cornerData: Record<TCorners, CornerRenderData>;
   private renderTargets: RenderTarget[];
+  private aFrameRayCaster: AFrameRayCaster | undefined;
   constructor({ renderTargets, isDebugging }: TSceneManagerInput) {
     this.flags = {
       sceneStarted: false,
@@ -278,6 +280,16 @@ export default class SceneManager {
     this.registerArEvents();
     if (this.debug.isDebugging) {
       this.registerDevToolEvents();
+    }
+    if (this.aFrameRayCaster === undefined) {
+      const canvas = document.querySelector("canvas.a-canvas");
+      if (canvas && canvas instanceof HTMLCanvasElement) {
+        this.aFrameRayCaster = new AFrameRayCaster({
+          camera: this.htmlElements.camera,
+          canvas,
+          renderTargets: this.renderTargets,
+        });
+      }
     }
   }
   private tick(time: number, _timeDelta: number) {

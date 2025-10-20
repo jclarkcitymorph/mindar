@@ -19,6 +19,7 @@ type THlsVideoRenderTargetInput = {
 } & TRenderTargetConstructorInput;
 
 export default class HlsVideoRenderTarget extends RenderTarget {
+  protected name: string;
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
   protected scaleVector: TVector3;
@@ -29,6 +30,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   protected videoUrl: string;
   constructor(input: THlsVideoRenderTargetInput) {
     super();
+    this.name = input.name;
     this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
     this.markerDimensions = input.markerDimensions;
     this.positionalOffsetVector =
@@ -89,8 +91,8 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       renderObj.setAttribute("position", "1000 1000 -10");
       renderObj.setAttribute("rotation", "0 0 0");
       renderObj.setAttribute("scale", "1 1 1");
-      renderObj.setAttribute("width", "1.6");
-      renderObj.setAttribute("height", ".9");
+      renderObj.setAttribute("width", "1");
+      renderObj.setAttribute("height", ".57");
       renderObj.setAttribute("visible", "true");
       renderObj.setAttribute("material", "src: #hls-video; shader: flat;");
       this.renderObj = renderObj;
@@ -99,12 +101,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     return this.renderObj;
   }
   public onFirstSeen(): void {
-    if (this.video === undefined)
-      throw new Error(
-        "Cannot call onFirstSeen() without initializing HlsVideoRenderTarget"
-      );
-
-    this.video.play();
+    return;
   }
   public onMarkerFound(): void {
     return;
@@ -113,36 +110,78 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     return;
   }
   public tickUpdate(data: TRenderTargetUpdateData): void {
-    if (this.video === undefined || this.renderObj === undefined)
+    if (this.renderObj === undefined) {
       throw new Error(
-        "tickUpdate called in HlsVideoRenderTarget before video or renderObj initialized"
+        "tickUpdate called in GltfModelRenderTarget before renderObj initialized"
       );
+    }
+
+    // Grab Average Data
     const avgMarkerData = JSON.parse(
       JSON.stringify(data.marker.average)
     ) as TRenderData;
 
+    // Apply Scale
     avgMarkerData.scale.x *= this.scaleVector.x;
     avgMarkerData.scale.y *= this.scaleVector.y;
     avgMarkerData.scale.z *= this.scaleVector.z;
 
+    // Clamp Rotations
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
-      this.vectorRotationLimits.x.min || -360,
-      this.vectorRotationLimits.x.max || 360
+      this.vectorRotationLimits.x.min ?? -360,
+      this.vectorRotationLimits.x.max ?? 360
     );
     avgMarkerData.rotation.y = clamp(
       avgMarkerData.rotation.y,
-      this.vectorRotationLimits.y.min || -360,
-      this.vectorRotationLimits.y.max || 360
+      this.vectorRotationLimits.y.min ?? -360,
+      this.vectorRotationLimits.y.max ?? 360
     );
     avgMarkerData.rotation.z = clamp(
       avgMarkerData.rotation.z,
-      this.vectorRotationLimits.z.min || -360,
-      this.vectorRotationLimits.z.max || 360
+      this.vectorRotationLimits.z.min ?? -360,
+      this.vectorRotationLimits.z.max ?? 360
     );
 
-    this.renderData.update(avgMarkerData);
+    // Calculate the local offset (in marker's local space)
+    const localOffset = new THREE.Vector3(
+      (this.markerDimensions.x / 2) *
+        this.positionalOffsetVector.x *
+        avgMarkerData.scale.x,
+      (this.markerDimensions.y / 2) *
+        this.positionalOffsetVector.y *
+        avgMarkerData.scale.y,
+      1 * this.positionalOffsetVector.z * avgMarkerData.scale.z
+    );
+
+    // Rotate the offset by the marker's rotation
+    const euler = new THREE.Euler(
+      (avgMarkerData.rotation.x * Math.PI) / 180,
+      (avgMarkerData.rotation.y * Math.PI) / 180,
+      (avgMarkerData.rotation.z * Math.PI) / 180,
+      "XYZ" // Adjust rotation order if needed
+    );
+    localOffset.applyEuler(euler);
+
+    // Apply the rotated offset to the marker's position
+    const finalPosition: TVector3 = {
+      x: avgMarkerData.position.x + localOffset.x,
+      y: avgMarkerData.position.y + localOffset.y,
+      z: avgMarkerData.position.z + localOffset.z,
+    };
+
+    this.renderData.update({
+      position: finalPosition,
+      rotation: avgMarkerData.rotation,
+      scale: avgMarkerData.scale,
+    });
 
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
+  }
+  public getRenderObj(): Entity | undefined {
+    return this.renderObj;
+  }
+  public getVideoObj(): HTMLVideoElement | undefined {
+    return this.video;
   }
 }

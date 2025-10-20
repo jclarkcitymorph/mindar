@@ -19,6 +19,7 @@ type TGltfModelRenderTarget = {
 } & TRenderTargetConstructorInput;
 
 export default class GltfModelRenderTarget extends RenderTarget {
+  protected name: string;
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
   protected scaleVector: TVector3;
@@ -30,6 +31,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
 
   constructor(input: TGltfModelRenderTarget) {
     super();
+    this.name = input.name;
     this.markerDimensions = input.markerDimensions;
     this.positionalOffsetVector =
       input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
@@ -113,7 +115,14 @@ export default class GltfModelRenderTarget extends RenderTarget {
       JSON.stringify(data.marker.average)
     ) as TRenderData;
 
-    // Apply Scale
+    // Store original marker scale BEFORE applying scaleVector multiplier
+    const originalMarkerScale = {
+      x: avgMarkerData.scale.x,
+      y: avgMarkerData.scale.y,
+      z: avgMarkerData.scale.z,
+    };
+
+    // Apply Scale multiplier to the object (for rendering)
     avgMarkerData.scale.x *= this.scaleVector.x;
     avgMarkerData.scale.y *= this.scaleVector.y;
     avgMarkerData.scale.z *= this.scaleVector.z;
@@ -135,37 +144,42 @@ export default class GltfModelRenderTarget extends RenderTarget {
       this.vectorRotationLimits.z.max ?? 360
     );
 
-    const rotatedOffset = this.rotateVectorWithThree(
-      this.positionalOffsetVector,
-      avgMarkerData.rotation
+    // Calculate the local offset using ORIGINAL marker scale (not the modified scale)
+    const localOffset = new THREE.Vector3(
+      (this.markerDimensions.x / 2) *
+        this.positionalOffsetVector.x *
+        originalMarkerScale.x,
+      (this.markerDimensions.y / 2) *
+        this.positionalOffsetVector.y *
+        originalMarkerScale.y,
+      1 * this.positionalOffsetVector.z * originalMarkerScale.z
     );
 
-    // Add the rotated offset to the parent's position
-    avgMarkerData.position.x += rotatedOffset.x;
-    avgMarkerData.position.y += rotatedOffset.y;
-    avgMarkerData.position.z += rotatedOffset.z;
+    // Rotate the offset by the marker's rotation
+    const euler = new THREE.Euler(
+      (avgMarkerData.rotation.x * Math.PI) / 180,
+      (avgMarkerData.rotation.y * Math.PI) / 180,
+      (avgMarkerData.rotation.z * Math.PI) / 180,
+      "XYZ" // Adjust rotation order if needed
+    );
+    localOffset.applyEuler(euler);
 
-    this.renderData.update(avgMarkerData);
+    // Apply the rotated offset to the marker's position
+    const finalPosition: TVector3 = {
+      x: avgMarkerData.position.x + localOffset.x,
+      y: avgMarkerData.position.y + localOffset.y,
+      z: avgMarkerData.position.z + localOffset.z,
+    };
+
+    this.renderData.update({
+      position: finalPosition,
+      rotation: avgMarkerData.rotation,
+      scale: avgMarkerData.scale, // This uses the multiplied scale for rendering
+    });
+
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
   }
-  private rotateVectorWithThree(
-    vector: TVector3,
-    rotation: TVector3
-  ): TVector3 {
-    // Create Three.js Vector3 from offset
-    const vec = new THREE.Vector3(vector.x, vector.y, vector.z);
-
-    // Create Euler rotation (assuming degrees, convert to radians)
-    const euler = new THREE.Euler(
-      (rotation.x * Math.PI) / 180,
-      (rotation.y * Math.PI) / 180,
-      (rotation.z * Math.PI) / 180,
-      "XYZ" // Rotation order - adjust if needed (XYZ, YXZ, ZXY, ZYX, YZX, XZY)
-    );
-
-    // Apply rotation to the vector
-    vec.applyEuler(euler);
-
-    return { x: vec.x, y: vec.y, z: vec.z };
+  public getRenderObj(): Entity | undefined {
+    return this.renderObj;
   }
 }

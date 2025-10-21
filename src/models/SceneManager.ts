@@ -38,8 +38,16 @@ export default class SceneManager {
       quaternion: InstanceType<typeof Quaternion>;
       euler: InstanceType<typeof Euler>;
     };
-    historic: Array<TRenderData>;
-    average: TRenderData;
+    historic: Array<{
+      position: { x: number; y: number; z: number };
+      quaternion: { x: number; y: number; z: number; w: number }; // Changed from rotation
+      scale: { x: number; y: number; z: number };
+    }>;
+    average: {
+      position: { x: number; y: number; z: number };
+      quaternion: { x: number; y: number; z: number; w: number }; // Changed from rotation
+      scale: { x: number; y: number; z: number };
+    };
   };
   private cornerData: Record<TCorners, CornerRenderData>;
   private renderTargets: RenderTarget[];
@@ -65,10 +73,11 @@ export default class SceneManager {
           y: 0,
           z: 0,
         },
-        rotation: {
+        quaternion: {
           x: 0,
           y: 0,
           z: 0,
+          w: 0,
         },
         scale: {
           x: 0,
@@ -373,25 +382,21 @@ export default class SceneManager {
       // Update Render Data
       const marker3d = this.htmlElements.marker.object3D;
       marker3d.updateMatrixWorld(true);
-      const { position, rotation, scale, euler, quaternion } =
-        this.markerData.current;
-      marker3d.matrixWorld.decompose(position, quaternion, scale);
-      euler.setFromQuaternion(quaternion, "XYZ");
-      const d = AFRAME.THREE.MathUtils.radToDeg;
-      rotation.x = d(euler.x);
-      rotation.y = d(euler.y);
-      rotation.z = d(euler.z);
-      // Update Historic Data
+      const { position, scale, quaternion } = this.markerData.current;
+
+      console.log({ position, scale, quaternion });
+
       this.markerData.historic.push({
         position: {
           x: position.x,
           y: position.y,
           z: position.z,
         },
-        rotation: {
-          x: rotation.x,
-          y: rotation.y,
-          z: rotation.z,
+        quaternion: {
+          x: quaternion.x,
+          y: quaternion.y,
+          z: quaternion.z,
+          w: quaternion.w,
         },
         scale: {
           x: scale.x,
@@ -406,14 +411,15 @@ export default class SceneManager {
         );
       }
       if (this.markerData.historic.length > 0) {
-        const avgMarkerData: TRenderData = this.markerData.historic.reduce(
+        const avgData = this.markerData.historic.reduce(
           (prev, curr) => {
             prev.position.x += curr.position.x;
             prev.position.y += curr.position.y;
             prev.position.z += curr.position.z;
-            prev.rotation.x += curr.rotation.x;
-            prev.rotation.y += curr.rotation.y;
-            prev.rotation.z += curr.rotation.z;
+            prev.quaternion.x += curr.quaternion.x;
+            prev.quaternion.y += curr.quaternion.y;
+            prev.quaternion.z += curr.quaternion.z;
+            prev.quaternion.w += curr.quaternion.w;
             prev.scale.x += curr.scale.x;
             prev.scale.y += curr.scale.y;
             prev.scale.z += curr.scale.z;
@@ -421,21 +427,37 @@ export default class SceneManager {
           },
           {
             position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
+            quaternion: { x: 0, y: 0, z: 0, w: 0 },
             scale: { x: 0, y: 0, z: 0 },
-          } as TRenderData
+          }
         );
+
         const count = this.markerData.historic.length;
-        avgMarkerData.position.x /= count;
-        avgMarkerData.position.y /= count;
-        avgMarkerData.position.z /= count;
-        avgMarkerData.rotation.x /= count;
-        avgMarkerData.rotation.y /= count;
-        avgMarkerData.rotation.z /= count;
-        avgMarkerData.scale.x /= count;
-        avgMarkerData.scale.y /= count;
-        avgMarkerData.scale.z /= count;
-        this.markerData.average = avgMarkerData;
+        avgData.position.x /= count;
+        avgData.position.y /= count;
+        avgData.position.z /= count;
+        avgData.quaternion.x /= count;
+        avgData.quaternion.y /= count;
+        avgData.quaternion.z /= count;
+        avgData.quaternion.w /= count;
+
+        // IMPORTANT: Normalize the averaged quaternion
+        const qMag = Math.sqrt(
+          avgData.quaternion.x * avgData.quaternion.x +
+            avgData.quaternion.y * avgData.quaternion.y +
+            avgData.quaternion.z * avgData.quaternion.z +
+            avgData.quaternion.w * avgData.quaternion.w
+        );
+        avgData.quaternion.x /= qMag;
+        avgData.quaternion.y /= qMag;
+        avgData.quaternion.z /= qMag;
+        avgData.quaternion.w /= qMag;
+
+        avgData.scale.x /= count;
+        avgData.scale.y /= count;
+        avgData.scale.z /= count;
+
+        this.markerData.average = avgData;
       }
     }
   }
@@ -513,11 +535,11 @@ export default class SceneManager {
           )}, y: ${lastKnown.position.y.toFixed(
             1
           )}, z: ${lastKnown.position.z.toFixed(1)}}`;
-          rotation.textContent = `Rot: {x: ${lastKnown.rotation.x.toFixed(
+          rotation.textContent = `Quat: {x: ${lastKnown.quaternion.x.toFixed(
             1
-          )}°, y: ${lastKnown.rotation.y.toFixed(
+          )}°, y: ${lastKnown.quaternion.y.toFixed(
             1
-          )}°, z: ${lastKnown.rotation.z.toFixed(1)}°}`;
+          )}°, z: ${lastKnown.quaternion.z.toFixed(1)}°}`;
           scale.textContent = `Scl: {x: ${lastKnown.scale.x.toFixed(
             1
           )}, y: ${lastKnown.scale.y.toFixed(
@@ -525,7 +547,7 @@ export default class SceneManager {
           )}, z: ${lastKnown.scale.z.toFixed(1)}}`;
         } else {
           position.textContent = `Pos: {x: ???, y: ???, z: ???}`;
-          rotation.textContent = `Rot: {x: ???°, y: ???°, z: ???°}`;
+          rotation.textContent = `Quat: {x: ???°, y: ???°, z: ???°}`;
           scale.textContent = `Scl: {x: ???, y: ???, z: ???}`;
         }
       }

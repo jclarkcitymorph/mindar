@@ -139,24 +139,20 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   public tickUpdate(data: TRenderTargetUpdateData): void {
     if (this.renderObj === undefined) {
       throw new Error(
-        "tickUpdate called in HlsVideoRenderTarget before renderObj initialized"
+        "tickUpdate called in GltfModelRenderTarget before renderObj initialized"
       );
     }
 
     // Use averaged data for stability
-    const avgMarkerData = JSON.parse(
-      JSON.stringify(data.marker.average)
-    ) as TRenderData;
+    const avgMarkerData = data.marker.average;
 
-    // Convert averaged rotation back to quaternion for proper matrix composition
-    const avgQuaternion = new THREE.Quaternion();
-    const avgEuler = new THREE.Euler(
-      (avgMarkerData.rotation.x * Math.PI) / 180,
-      (avgMarkerData.rotation.y * Math.PI) / 180,
-      (avgMarkerData.rotation.z * Math.PI) / 180,
-      "XYZ"
+    // Use the averaged quaternion directly (already normalized in SceneManager)
+    const avgQuaternion = new THREE.Quaternion(
+      avgMarkerData.quaternion.x,
+      avgMarkerData.quaternion.y,
+      avgMarkerData.quaternion.z,
+      avgMarkerData.quaternion.w
     );
-    avgQuaternion.setFromEuler(avgEuler);
 
     // Convert averaged position and scale to THREE.js vectors
     const avgPosition = new THREE.Vector3(
@@ -188,19 +184,27 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     // This handles rotation and position, but we need to handle z-offset separately
     const worldPosition = localPosition.applyMatrix4(markerMatrix);
 
+    // Convert quaternion to Euler for display/clamping if needed
+    const euler = new THREE.Euler().setFromQuaternion(avgQuaternion, "XYZ");
+    const rotation = {
+      x: THREE.MathUtils.radToDeg(euler.x),
+      y: THREE.MathUtils.radToDeg(euler.y),
+      z: THREE.MathUtils.radToDeg(euler.z),
+    };
+
     // Clamp Rotations
-    avgMarkerData.rotation.x = clamp(
-      avgMarkerData.rotation.x,
+    rotation.x = clamp(
+      rotation.x,
       this.vectorRotationLimits.x.min ?? -360,
       this.vectorRotationLimits.x.max ?? 360
     );
-    avgMarkerData.rotation.y = clamp(
-      avgMarkerData.rotation.y,
+    rotation.y = clamp(
+      rotation.y,
       this.vectorRotationLimits.y.min ?? -360,
       this.vectorRotationLimits.y.max ?? 360
     );
-    avgMarkerData.rotation.z = clamp(
-      avgMarkerData.rotation.z,
+    rotation.z = clamp(
+      rotation.z,
       this.vectorRotationLimits.z.min ?? -360,
       this.vectorRotationLimits.z.max ?? 360
     );
@@ -218,7 +222,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
         y: worldPosition.y,
         z: worldPosition.z,
       },
-      rotation: avgMarkerData.rotation,
+      rotation,
       scale: finalScale,
     });
 

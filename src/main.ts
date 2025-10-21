@@ -65,5 +65,5 @@ const gltfModelTarget = new GltfModelRenderTarget({
 
 new SceneManager({
   isDebugging: false,
-  renderTargets: [hlsVideoTarget, gltfModelTarget],
+  renderTargets: [gltfModelTarget],
 });

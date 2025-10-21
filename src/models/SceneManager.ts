@@ -383,7 +383,7 @@ export default class SceneManager {
       const marker3d = this.htmlElements.marker.object3D;
       marker3d.updateMatrixWorld(true);
       const { position, scale, quaternion } = this.markerData.current;
-
+      marker3d.matrixWorld.decompose(position, quaternion, scale);
       console.log({ position, scale, quaternion });
 
       this.markerData.historic.push({

@@ -1,5 +1,6 @@
 import type { Entity } from "aframe";
 import type { TCorners } from "../../types/TCorners";
+import type { TRenderData } from "../../types/TRenderData";
 import type { TVector2 } from "../../types/TVector2";
 import type { TVector3, TVector3Limits } from "../../types/TVector3";
 import type CornerRenderData from "../CornerRenderData";
@@ -16,42 +17,8 @@ type TRenderTargetUpdateData = {
       quaternion: InstanceType<typeof Quaternion>;
       euler: InstanceType<typeof Euler>;
     };
-    historic: Array<{
-      position: {
-        x: number;
-        y: number;
-        z: number;
-      };
-      quaternion: {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      };
-      scale: {
-        x: number;
-        y: number;
-        z: number;
-      };
-    }>;
-    average: {
-      position: {
-        x: number;
-        y: number;
-        z: number;
-      };
-      quaternion: {
-        x: number;
-        y: number;
-        z: number;
-        w: number;
-      };
-      scale: {
-        x: number;
-        y: number;
-        z: number;
-      };
-    };
+    historic: Array<TRenderData>;
+    average: TRenderData;
   };
   corners: Record<TCorners, CornerRenderData>;
 };

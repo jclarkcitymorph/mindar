@@ -151,13 +151,13 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       this.vectorRotationLimits.x.min ?? -360,
       this.vectorRotationLimits.x.max ?? 360
     );
-    rotation.y = clamp(
-      rotation.y,
+    avgMarkerData.rotation.y = clamp(
+      avgMarkerData.rotation.y,
       this.vectorRotationLimits.y.min ?? -360,
       this.vectorRotationLimits.y.max ?? 360
     );
-    rotation.z = clamp(
-      rotation.z,
+    avgMarkerData.rotation.z = clamp(
+      avgMarkerData.rotation.z,
       this.vectorRotationLimits.z.min ?? -360,
       this.vectorRotationLimits.z.max ?? 360
     );

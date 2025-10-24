@@ -114,76 +114,86 @@ export default class GltfModelRenderTarget extends RenderTarget {
   public tickUpdate(data: TRenderTargetUpdateData): void {
     if (this.renderObj === undefined) {
       throw new Error(
-        "tickUpdate called in GltfModelRenderTarget before renderObj initialized"
+        "tickUpdate called in HlsVideoRenderTarget before renderObj initialized"
       );
     }
 
-    // Use averaged data for stability
-    const avgMarkerData = data.marker.average;
+    // 1. Get averaged data for stability
+    const avgMarkerData = JSON.parse(
+      JSON.stringify(data.marker.average)
+    ) as TRenderData;
 
-    // Use the averaged quaternion directly (already normalized in SceneManager)
-    const avgQuaternion = new THREE.Quaternion(
-      avgMarkerData.quaternion.x,
-      avgMarkerData.quaternion.y,
-      avgMarkerData.quaternion.z,
-      avgMarkerData.quaternion.w
+    // Convert averaged rotation to THREE.js objects
+    const avgQuaternion = new THREE.Quaternion();
+    avgQuaternion.setFromEuler(
+      new THREE.Euler(
+        (avgMarkerData.rotation.x * Math.PI) / 180,
+        (avgMarkerData.rotation.y * Math.PI) / 180,
+        (avgMarkerData.rotation.z * Math.PI) / 180,
+        "XYZ"
+      )
     );
 
-    // Convert averaged position and scale to THREE.js vectors
     const avgPosition = new THREE.Vector3(
       avgMarkerData.position.x,
       avgMarkerData.position.y,
       avgMarkerData.position.z
     );
-    // Use unit scale for z-axis since marker is flat (z-scale is near 0)
-    // This prevents degenerate matrix issues
-    const avgScale = new THREE.Vector3(
+
+    // Use a temporary scale vector for the plane projection matrix.
+    // Z-scale is set to 1.0 for matrix composition stability.
+    const tempAvgScale = new THREE.Vector3(
       avgMarkerData.scale.x,
       avgMarkerData.scale.y,
       1.0
     );
 
-    // Create the marker's world transformation matrix from averaged data
+    // Create the marker's world transformation matrix
     const markerMatrix = new THREE.Matrix4();
-    markerMatrix.compose(avgPosition, avgQuaternion, avgScale);
+    markerMatrix.compose(avgPosition, avgQuaternion, tempAvgScale);
 
-    // Define the local offset position (in marker's local space)
-    // Note: Z offset should NOT be scaled by marker scale since marker is flat (z-scale ≈ 0)
-    const localPosition = new THREE.Vector3(
+    // 2. Define the local offset position *ON* the marker plane (Z=0).
+    // This defines the corner position (e.g., bottom-left is x:-1, y:-1).
+    const localPositionOnPlane = new THREE.Vector3(
       (this.markerDimensions.x / 2) * this.positionalOffsetVector.x,
       (this.markerDimensions.y / 2) * this.positionalOffsetVector.y,
-      this.positionalOffsetVector.z
+      0 // Crucial: Z must be 0 here to calculate the point on the marker surface
     );
 
-    // Transform the local position to world space using the marker's matrix
-    const worldPosition = localPosition.applyMatrix4(markerMatrix);
+    // 3. Transform the local position on the plane to its world space coordinate.
+    const worldPositionOnPlane =
+      localPositionOnPlane.applyMatrix4(markerMatrix);
 
-    // Convert quaternion to Euler for display/clamping if needed
-    const euler = new THREE.Euler().setFromQuaternion(avgQuaternion, "XYZ");
-    const rotation = {
-      x: THREE.MathUtils.radToDeg(euler.x),
-      y: THREE.MathUtils.radToDeg(euler.y),
-      z: THREE.MathUtils.radToDeg(euler.z),
-    };
+    // 4. Calculate the Z-offset in world space (perpendicular to the marker surface).
+    // Get the marker's Z-axis (normal vector) by applying the marker's rotation to the Z-unit vector [0, 0, 1].
+    const markerZAxis = new THREE.Vector3(0, 0, 1).applyQuaternion(
+      avgQuaternion
+    );
+    markerZAxis.normalize();
 
-    // Clamp Rotations
-    rotation.x = clamp(
-      rotation.x,
+    // The final world position is the point on the plane plus the small Z-offset along the marker's normal.
+    const finalWorldPosition = worldPositionOnPlane.add(
+      markerZAxis.multiplyScalar(this.positionalOffsetVector.z)
+    );
+
+    // Clamp Rotations (This section remains unchanged and is correct)
+    avgMarkerData.rotation.x = clamp(
+      avgMarkerData.rotation.x,
       this.vectorRotationLimits.x.min ?? -360,
       this.vectorRotationLimits.x.max ?? 360
     );
-    rotation.y = clamp(
-      rotation.y,
+    avgMarkerData.rotation.y = clamp(
+      avgMarkerData.rotation.y,
       this.vectorRotationLimits.y.min ?? -360,
       this.vectorRotationLimits.y.max ?? 360
     );
-    rotation.z = clamp(
-      rotation.z,
+    avgMarkerData.rotation.z = clamp(
+      avgMarkerData.rotation.z,
       this.vectorRotationLimits.z.min ?? -360,
       this.vectorRotationLimits.z.max ?? 360
     );
 
-    // Apply scale multiplier
+    // Apply scale multiplier (This section remains unchanged and is correct)
     const finalScale = {
       x: avgMarkerData.scale.x * this.scaleVector.x,
       y: avgMarkerData.scale.y * this.scaleVector.y,
@@ -192,11 +202,11 @@ export default class GltfModelRenderTarget extends RenderTarget {
 
     this.renderData.update({
       position: {
-        x: worldPosition.x,
-        y: worldPosition.y,
-        z: worldPosition.z,
+        x: finalWorldPosition.x,
+        y: finalWorldPosition.y,
+        z: finalWorldPosition.z,
       },
-      rotation,
+      rotation: avgMarkerData.rotation,
       scale: finalScale,
     });
 

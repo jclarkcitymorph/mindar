@@ -27,6 +27,7 @@ export type TRenderTargetConstructorInput = {
   name: string;
   markerDimensions: TVector2;
   positionalOffsetVector?: TVector3;
+  originOffsetVector?: TVector3;
   scaleVector?: TVector3;
   vectorRotationLimits?: TVector3Limits;
 };
@@ -35,6 +36,7 @@ export default abstract class RenderTarget {
   protected abstract name: string;
   protected abstract markerDimensions: TVector2;
   protected abstract positionalOffsetVector: TVector3;
+  protected abstract originOffsetVector: TVector3;
   protected abstract scaleVector: TVector3;
   protected abstract renderData: RenderData;
   protected abstract renderObj: Entity | undefined;
@@ -42,9 +44,6 @@ export default abstract class RenderTarget {
   public abstract init(): Promise<void>;
   public abstract createAFrameElement(): HTMLElement;
   public abstract createAssets(): Array<HTMLElement> | undefined;
-  public abstract onFirstSeen(): void;
-  public abstract onMarkerLost(_data: TRenderTargetUpdateData): void;
-  public abstract onMarkerFound(_data: TRenderTargetUpdateData): void;
   public abstract tickUpdate(_data: TRenderTargetUpdateData): void;
   public abstract getRenderObj(): Entity | undefined;
   public abstract onClick(): void;

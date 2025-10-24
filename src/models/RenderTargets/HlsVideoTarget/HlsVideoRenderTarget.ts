@@ -13,6 +13,7 @@ import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
+import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
 
 type THlsOnClickInput = {
   markerDimensions?: TVector2;
@@ -21,12 +22,14 @@ type THlsOnClickInput = {
   renderData?: RenderData;
   vectorRotationLimits?: TVector3Limits;
   renderObj?: Entity | undefined;
+  videoDimensions?: TVector2;
   video?: HTMLVideoElement | undefined;
   videoUrl?: string;
   imageUrl?: string;
 };
 
 type THlsVideoRenderTargetInput = {
+  videoDimensions: TVector2;
   videoUrl: string;
 } & TRenderTargetConstructorInput;
 
@@ -34,11 +37,13 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   protected name: string;
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
+  protected originOffsetVector: TVector3;
   protected scaleVector: TVector3;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
   protected renderObj: Entity | undefined;
   protected video: HTMLVideoElement | undefined;
+  protected videoDimensions: TVector2;
   protected videoUrl: string;
   protected onClickHandler: ((input: THlsOnClickInput) => void) | undefined;
   constructor(input: THlsVideoRenderTargetInput) {
@@ -52,6 +57,9 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
     this.videoUrl = input.videoUrl;
+    this.videoDimensions = input.videoDimensions;
+    this.originOffsetVector =
+      input.originOffsetVector ?? DEFAULT_ORIGIN_OFFSET_VECTOR;
   }
   public init(): Promise<void> {
     return new Promise((res, _rej) => {
@@ -92,6 +100,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       video.setAttribute("playsinline", "true");
       video.setAttribute("loop", "true");
       video.setAttribute("muted", "true");
+      video.muted = true;
       this.video = video;
     }
 
@@ -101,11 +110,11 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     if (this.renderObj === undefined) {
       const renderObj = document.createElement("a-plane");
       renderObj.setAttribute("id", "obj");
-      renderObj.setAttribute("position", "1000 1000 -10");
-      renderObj.setAttribute("rotation", "0 0 0");
-      renderObj.setAttribute("scale", "1 1 1");
-      renderObj.setAttribute("width", "1");
-      renderObj.setAttribute("height", ".57");
+      renderObj.setAttribute("position", "1000 1000 -10"); // Overwritten by tickUpdate()
+      renderObj.setAttribute("rotation", "0 0 0"); // Overwritten by tickUpdate()
+      renderObj.setAttribute("scale", "1 1 1"); // Overwritten by tickUpdate()
+      renderObj.setAttribute("width", this.videoDimensions.x.toString());
+      renderObj.setAttribute("height", this.videoDimensions.y.toString());
       renderObj.setAttribute("visible", "true");
       renderObj.setAttribute("material", "src: #hls-video; shader: flat;");
       this.renderObj = renderObj;
@@ -113,15 +122,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
 
     return this.renderObj;
   }
-  public onFirstSeen(): void {
-    return;
-  }
-  public onMarkerFound(): void {
-    return;
-  }
-  public onMarkerLost(): void {
-    return;
-  }
+
   public onClick(): void {
     if (this.onClickHandler) {
       this.onClickHandler({
@@ -137,58 +138,14 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     }
   }
   public tickUpdate(data: TRenderTargetUpdateData): void {
-    if (this.renderObj === undefined) {
-      throw new Error(
-        "tickUpdate called in HlsVideoRenderTarget before renderObj initialized"
-      );
+    if (!this.renderObj) {
+      throw new Error("tickUpdate called before renderObj initialized");
     }
 
-    // Use averaged data for stability
     const avgMarkerData = JSON.parse(
       JSON.stringify(data.marker.average)
     ) as TRenderData;
 
-    // Convert averaged rotation back to quaternion for proper matrix composition
-    const avgQuaternion = new THREE.Quaternion();
-    const avgEuler = new THREE.Euler(
-      (avgMarkerData.rotation.x * Math.PI) / 180,
-      (avgMarkerData.rotation.y * Math.PI) / 180,
-      (avgMarkerData.rotation.z * Math.PI) / 180,
-      "XYZ"
-    );
-    avgQuaternion.setFromEuler(avgEuler);
-
-    // Convert averaged position and scale to THREE.js vectors
-    const avgPosition = new THREE.Vector3(
-      avgMarkerData.position.x,
-      avgMarkerData.position.y,
-      avgMarkerData.position.z
-    );
-    // Use unit scale for z-axis since marker is flat (z-scale is near 0)
-    // This prevents degenerate matrix issues
-    const avgScale = new THREE.Vector3(
-      avgMarkerData.scale.x,
-      avgMarkerData.scale.y,
-      1.0
-    );
-
-    // Create the marker's world transformation matrix from averaged data
-    const markerMatrix = new THREE.Matrix4();
-    markerMatrix.compose(avgPosition, avgQuaternion, avgScale);
-
-    // Define the local offset position (in marker's local space)
-    // Note: Z offset should NOT be scaled by marker scale since marker is flat (z-scale ≈ 0)
-    const localPosition = new THREE.Vector3(
-      (this.markerDimensions.x / 2) * this.positionalOffsetVector.x,
-      (this.markerDimensions.y / 2) * this.positionalOffsetVector.y,
-      this.positionalOffsetVector.z
-    );
-
-    // Transform the local position to world space using the marker's matrix
-    // This handles rotation and position, but we need to handle z-offset separately
-    const worldPosition = localPosition.applyMatrix4(markerMatrix);
-
-    // Clamp Rotations
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
       this.vectorRotationLimits.x.min ?? -360,
@@ -205,19 +162,30 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       this.vectorRotationLimits.z.max ?? 360
     );
 
-    // Apply scale multiplier
     const finalScale = {
       x: avgMarkerData.scale.x * this.scaleVector.x,
       y: avgMarkerData.scale.y * this.scaleVector.y,
       z: avgMarkerData.scale.z * this.scaleVector.z,
     };
 
+    avgMarkerData.position.x =
+      avgMarkerData.position.x +
+      this.markerDimensions.x *
+        avgMarkerData.scale.x *
+        this.positionalOffsetVector.x *
+        0.5;
+    avgMarkerData.position.y =
+      avgMarkerData.position.y +
+      this.markerDimensions.y *
+        avgMarkerData.scale.y *
+        this.positionalOffsetVector.y *
+        0.5;
+    avgMarkerData.position.z =
+      avgMarkerData.position.z +
+      0 * avgMarkerData.scale.z * this.positionalOffsetVector.z * 0.5;
+
     this.renderData.update({
-      position: {
-        x: worldPosition.x,
-        y: worldPosition.y,
-        z: worldPosition.z,
-      },
+      position: avgMarkerData.position,
       rotation: avgMarkerData.rotation,
       scale: finalScale,
     });

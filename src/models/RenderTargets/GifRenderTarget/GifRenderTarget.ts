@@ -22,6 +22,28 @@ import type { Mesh } from "three";
 import PubSub from "../../PubSub/PubSub";
 import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
 
+type TGifRenderTargetInput = {
+  dimensions: TVector2;
+  gifUrl: string;
+  transparencyTarget?: TGifTransparencyTarget;
+} & TRenderTargetConstructorInput;
+
+type TGifTransparencyTarget = {
+  red: number; // 0 - 255
+  green: number; // 0 - 255
+  blue: number; // 0 - 255
+  tolerance: number; // 0 - 1
+};
+
+type TGifTransparencyTargetExpanded = {
+  redMin: number;
+  redMax: number;
+  greenMin: number;
+  greenMax: number;
+  blueMin: number;
+  blueMax: number;
+};
+
 export default class GifRenderTarget extends RenderTarget {
   protected name: string;
   protected markerDimensions: TVector2;
@@ -34,6 +56,9 @@ export default class GifRenderTarget extends RenderTarget {
   protected gifElement: HTMLCanvasElement | undefined;
   protected gifUrl: string;
   protected dimensions: TVector2;
+  protected transparencyTargetExpanded:
+    | TGifTransparencyTargetExpanded
+    | undefined;
 
   // Gif Status
   protected hasStarted: boolean = false;
@@ -45,12 +70,7 @@ export default class GifRenderTarget extends RenderTarget {
   protected timeFor0thFrame: number = 0;
   protected timesToRepeat: number = -1; // -1 infinite,
 
-  constructor(
-    input: {
-      dimensions: TVector2;
-      gifUrl: string;
-    } & TRenderTargetConstructorInput
-  ) {
+  constructor(input: TGifRenderTargetInput) {
     super();
     this.name = input.name;
     this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
@@ -65,6 +85,19 @@ export default class GifRenderTarget extends RenderTarget {
     this.originOffsetVector =
       input.originOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
     this.registerOnFirstSceneListener();
+    if (input.transparencyTarget) {
+      const { red, blue, green, tolerance } = input.transparencyTarget;
+      const toleranceRange = 255 * tolerance;
+
+      this.transparencyTargetExpanded = {
+        redMin: Math.max(0, red - toleranceRange),
+        redMax: Math.min(255, red + toleranceRange),
+        greenMin: Math.max(0, green - toleranceRange),
+        greenMax: Math.min(255, green + toleranceRange),
+        blueMin: Math.max(0, blue - toleranceRange),
+        blueMax: Math.min(255, blue + toleranceRange),
+      };
+    }
   }
 
   public init(): Promise<void> {
@@ -82,6 +115,12 @@ export default class GifRenderTarget extends RenderTarget {
         .then((buffer) => {
           this.parsedGif = parseGIF(buffer);
           this.parsedFrames = decompressFrames(this.parsedGif, true);
+          console.log({
+            name: this.name,
+            disposalType: this.parsedFrames
+              .map((f) => f.disposalType)
+              .join(", "),
+          });
           this.frameDelayTotals = this.parsedFrames.reduce(
             (prev, curr, index) => {
               if (index === 0) {
@@ -149,6 +188,7 @@ export default class GifRenderTarget extends RenderTarget {
       JSON.stringify(data.marker.average)
     ) as TRenderData;
 
+    // Step 1: Clamp rotations
     avgMarkerData.rotation.x = clamp(
       avgMarkerData.rotation.x,
       this.vectorRotationLimits.x.min ?? -360,
@@ -165,43 +205,126 @@ export default class GifRenderTarget extends RenderTarget {
       this.vectorRotationLimits.z.max ?? 360
     );
 
+    // Step 2: Calculate final scale
     const finalScale = {
       x: avgMarkerData.scale.x * this.scaleVector.x,
       y: avgMarkerData.scale.y * this.scaleVector.y,
       z: avgMarkerData.scale.z * this.scaleVector.z,
     };
 
-    avgMarkerData.position.x =
-      avgMarkerData.position.x +
-      this.markerDimensions.x *
+    // Step 3: Calculate the attachment point offset in marker's local space
+    const attachmentOffset = {
+      x:
+        this.markerDimensions.x *
         avgMarkerData.scale.x *
         this.positionalOffsetVector.x *
-        0.5 +
-      this.dimensions.x *
-        avgMarkerData.scale.x *
-        this.originOffsetVector.x *
-        0.5;
-    avgMarkerData.position.y =
-      avgMarkerData.position.y +
-      this.markerDimensions.y *
+        0.5,
+      y:
+        this.markerDimensions.y *
         avgMarkerData.scale.y *
         this.positionalOffsetVector.y *
-        0.5 +
-      this.dimensions.y *
+        0.5,
+      z: 0 * avgMarkerData.scale.z * this.positionalOffsetVector.z * 0.5,
+    };
+
+    // Step 4: Calculate the child's origin offset in its local space
+    const childOriginOffset = {
+      x:
+        this.dimensions.x *
+        avgMarkerData.scale.x *
+        this.originOffsetVector.x *
+        0.5,
+      y:
+        this.dimensions.y *
         avgMarkerData.scale.y *
         this.originOffsetVector.y *
-        0.5;
-    avgMarkerData.position.z =
-      avgMarkerData.position.z +
-      0 * avgMarkerData.scale.z * this.positionalOffsetVector.z * 0.5;
+        0.5,
+      z: 0,
+    };
 
+    // Step 5: Add Z-offset in local space to push child in front of marker
+    // This value should be adjusted based on your scene scale
+    const Z_OFFSET = 1; // Small offset to prevent z-fighting
+    const localZOffset = {
+      x: 0,
+      y: 0,
+      z: Z_OFFSET,
+    };
+
+    // Step 6: Rotate all offsets by the marker's rotation
+    const rotatedAttachmentOffset = this.rotateVector(
+      attachmentOffset,
+      avgMarkerData.rotation
+    );
+
+    const rotatedChildOriginOffset = this.rotateVector(
+      childOriginOffset,
+      avgMarkerData.rotation
+    );
+
+    const rotatedZOffset = this.rotateVector(
+      localZOffset,
+      avgMarkerData.rotation
+    );
+
+    // Step 7: Calculate final position with Z-offset
+    const finalPosition = {
+      x:
+        avgMarkerData.position.x +
+        rotatedAttachmentOffset.x +
+        rotatedChildOriginOffset.x +
+        rotatedZOffset.x,
+      y:
+        avgMarkerData.position.y +
+        rotatedAttachmentOffset.y +
+        rotatedChildOriginOffset.y +
+        rotatedZOffset.y,
+      z:
+        avgMarkerData.position.z +
+        rotatedAttachmentOffset.z +
+        rotatedChildOriginOffset.z +
+        rotatedZOffset.z,
+    };
+
+    // Step 8: Use the same rotation as the marker
     this.renderData.update({
-      position: avgMarkerData.position,
+      position: finalPosition,
       rotation: avgMarkerData.rotation,
       scale: finalScale,
     });
 
     RenderData.updateHtmlElement(this.renderData, this.renderObj);
+  }
+
+  private rotateVector(vector: TVector3, rotation: TVector3): TVector3 {
+    // Convert degrees to radians
+    const rx = (rotation.x * Math.PI) / 180;
+    const ry = (rotation.y * Math.PI) / 180;
+    const rz = (rotation.z * Math.PI) / 180;
+
+    let x = vector.x;
+    let y = vector.y;
+    let z = vector.z;
+
+    // Rotate around Z axis
+    let newX = x * Math.cos(rz) - y * Math.sin(rz);
+    let newY = x * Math.sin(rz) + y * Math.cos(rz);
+    x = newX;
+    y = newY;
+
+    // Rotate around Y axis
+    newX = x * Math.cos(ry) + z * Math.sin(ry);
+    let newZ = -x * Math.sin(ry) + z * Math.cos(ry);
+    x = newX;
+    z = newZ;
+
+    // Rotate around X axis
+    newY = y * Math.cos(rx) - z * Math.sin(rx);
+    newZ = y * Math.sin(rx) + z * Math.cos(rx);
+    y = newY;
+    z = newZ;
+
+    return { x, y, z };
   }
 
   public getRenderObj(): Entity | undefined {
@@ -266,7 +389,11 @@ export default class GifRenderTarget extends RenderTarget {
 
       if (targetFrame !== this.currentFrame) {
         const frame = this.parsedFrames[targetFrame];
-        if (targetFrame === 0) {
+        if (
+          frame.disposalType === 2 ||
+          frame.disposalType === 3 ||
+          targetFrame === 0
+        ) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
         // Render the new frame
@@ -282,12 +409,24 @@ export default class GifRenderTarget extends RenderTarget {
           );
           imageData.data.set(frame.patch);
 
-          // Make black transparent =>
-          // CUSTOM OVERWRITE OF ALPHA FOR ANYTHING UNDER 10
-          const data = imageData.data;
-          for (let i = 0; i < data.length; i += 4) {
-            if (data[i] < 45 && data[i + 1] < 45 && data[i + 2] < 45) {
-              data[i + 3] = 0;
+          if (this.transparencyTargetExpanded) {
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i];
+              const g = data[i + 1];
+              const b = data[i + 2];
+
+              // Check if pixel falls within tolerance range for all channels
+              if (
+                r >= this.transparencyTargetExpanded.redMin &&
+                r <= this.transparencyTargetExpanded.redMax &&
+                g >= this.transparencyTargetExpanded.greenMin &&
+                g <= this.transparencyTargetExpanded.greenMax &&
+                b >= this.transparencyTargetExpanded.blueMin &&
+                b <= this.transparencyTargetExpanded.blueMax
+              ) {
+                data[i + 3] = 0; // Make transparent
+              }
             }
           }
 

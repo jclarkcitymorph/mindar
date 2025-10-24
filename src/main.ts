@@ -8,21 +8,6 @@ import SceneManager from "./models/SceneManager";
 
 const markerDimensions = { x: 1, y: 0.57 };
 
-const vectorRotationLimits = {
-  x: {
-    min: -50,
-    max: 50,
-  },
-  y: {
-    min: -50,
-    max: 50,
-  },
-  z: {
-    min: -50,
-    max: 50,
-  },
-};
-
 const demoVideos = {
   cityMorphDino:
     "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/23fa836c-65ea-47d2-80ee-10c01e2dc883/playlist.m3u8",
@@ -41,7 +26,6 @@ const hlsVideoTarget = new HlsVideoRenderTarget({
     y: 1.05,
     z: 1,
   },
-  vectorRotationLimits,
   videoDimensions: {
     x: 1,
     y: 0.57,
@@ -66,7 +50,58 @@ const gifTarget = new GifRenderTarget({
     y: -1,
     z: 0,
   },
+  transparencyTarget: {
+    blue: 5,
+    green: 5,
+    red: 5,
+    tolerance: 10 / 255,
+  },
 });
+
+const gifTarget2 = new GifRenderTarget({
+  markerDimensions,
+  gifUrl: "assets/cmslogo.gif",
+  name: "CmsLogoGif",
+  dimensions: {
+    x: 0.45,
+    y: 0.370588235,
+  },
+  positionalOffsetVector: {
+    x: 0,
+    y: 1,
+    z: 0,
+  },
+  originOffsetVector: {
+    x: 0,
+    y: 1,
+    z: 0,
+  },
+});
+// const gifTarget3 = new GifRenderTarget({
+//   markerDimensions,
+//   gifUrl: "assets/dancingbaby.gif",
+//   name: "DancingBabyGif",
+//   dimensions: {
+//     x: 0.75,
+//     y: 0.681818182,
+//   },
+//   positionalOffsetVector: {
+//     x: -1,
+//     y: 0,
+//     z: 0,
+//   },
+//   originOffsetVector: {
+//     x: -1,
+//     y: 0,
+//     z: 0,
+//   },
+//   transparencyTarget: {
+//     blue: 5,
+//     green: 5,
+//     red: 5,
+//     tolerance: 10 / 255,
+//   },
+// });
 
 new Controls({
   controls: [
@@ -118,5 +153,5 @@ new Controls({
 
 new SceneManager({
   isDebugging: false,
-  renderTargets: [hlsVideoTarget, gifTarget],
+  renderTargets: [hlsVideoTarget, gifTarget, gifTarget2],
 });

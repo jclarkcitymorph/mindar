@@ -69,6 +69,8 @@ export default class GifRenderTarget extends RenderTarget {
   protected frameDelayTotals: Array<number> = [];
   protected timeFor0thFrame: number = 0;
   protected timesToRepeat: number = -1; // -1 infinite,
+  protected renderedFrames: Set<number> = new Set();
+  protected currentLoopIteration: number = 0;
 
   constructor(input: TGifRenderTargetInput) {
     super();
@@ -115,12 +117,6 @@ export default class GifRenderTarget extends RenderTarget {
         .then((buffer) => {
           this.parsedGif = parseGIF(buffer);
           this.parsedFrames = decompressFrames(this.parsedGif, true);
-          console.log({
-            name: this.name,
-            disposalType: this.parsedFrames
-              .map((f) => f.disposalType)
-              .join(", "),
-          });
           this.frameDelayTotals = this.parsedFrames.reduce(
             (prev, curr, index) => {
               if (index === 0) {
@@ -132,6 +128,15 @@ export default class GifRenderTarget extends RenderTarget {
             },
             [] as number[]
           );
+          console.log({
+            name: this.name,
+            disposalType: this.parsedFrames
+              .map((f) => f.disposalType)
+              .join(", "),
+            frameDims: this.parsedFrames.map((f) => f.dims),
+            frameDelays: this.parsedFrames.map((f) => f.delay),
+            frameDelayTotals: this.frameDelayTotals,
+          });
 
           const bytes = new Uint8Array(buffer);
           const str = new TextDecoder().decode(bytes);
@@ -244,7 +249,7 @@ export default class GifRenderTarget extends RenderTarget {
 
     // Step 5: Add Z-offset in local space to push child in front of marker
     // This value should be adjusted based on your scene scale
-    const Z_OFFSET = 1; // Small offset to prevent z-fighting
+    const Z_OFFSET = 50; // Small offset to prevent z-fighting
     const localZOffset = {
       x: 0,
       y: 0,
@@ -358,12 +363,14 @@ export default class GifRenderTarget extends RenderTarget {
 
       let adjustedDiff = diff;
       let animationFinished = false;
+      let currentLoopIteration = 0;
 
       if (this.timesToRepeat === -1) {
+        currentLoopIteration = Math.floor(diff / totalDuration);
         adjustedDiff = diff % totalDuration;
       } else if (this.timesToRepeat > 0) {
-        const loopNumber = Math.floor(diff / totalDuration);
-        if (loopNumber < this.timesToRepeat) {
+        currentLoopIteration = Math.floor(diff / totalDuration);
+        if (currentLoopIteration < this.timesToRepeat) {
           adjustedDiff = diff % totalDuration;
         } else {
           animationFinished = true;
@@ -378,6 +385,12 @@ export default class GifRenderTarget extends RenderTarget {
         return;
       }
 
+      // Check if we've moved to a new loop iteration
+      if (currentLoopIteration !== this.currentLoopIteration) {
+        this.currentLoopIteration = currentLoopIteration;
+        this.renderedFrames.clear();
+      }
+
       // Find which frame we should be on
       let targetFrame = 0;
       for (let i = 0; i < this.frameDelayTotals.length; i++) {
@@ -387,67 +400,119 @@ export default class GifRenderTarget extends RenderTarget {
         }
       }
 
-      if (targetFrame !== this.currentFrame) {
-        const frame = this.parsedFrames[targetFrame];
-        if (
-          frame.disposalType === 2 ||
-          frame.disposalType === 3 ||
-          targetFrame === 0
-        ) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Render all unrendered frames up to and including the target frame
+      let framesToRender: number[] = [];
+
+      if (this.renderedFrames.size === 0) {
+        // First render - render all frames from 0 to target
+        for (let i = 0; i <= targetFrame; i++) {
+          framesToRender.push(i);
         }
-        // Render the new frame
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = frame.dims.width;
-        tempCanvas.height = frame.dims.height;
-        const tempCtx = tempCanvas.getContext("2d");
-
-        if (tempCtx) {
-          const imageData = tempCtx.createImageData(
-            frame.dims.width,
-            frame.dims.height
-          );
-          imageData.data.set(frame.patch);
-
-          if (this.transparencyTargetExpanded) {
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-              const r = data[i];
-              const g = data[i + 1];
-              const b = data[i + 2];
-
-              // Check if pixel falls within tolerance range for all channels
-              if (
-                r >= this.transparencyTargetExpanded.redMin &&
-                r <= this.transparencyTargetExpanded.redMax &&
-                g >= this.transparencyTargetExpanded.greenMin &&
-                g <= this.transparencyTargetExpanded.greenMax &&
-                b >= this.transparencyTargetExpanded.blueMin &&
-                b <= this.transparencyTargetExpanded.blueMax
-              ) {
-                data[i + 3] = 0; // Make transparent
-              }
+      } else if (targetFrame !== this.currentFrame) {
+        // We've jumped frames - render all intermediate frames
+        if (targetFrame > this.currentFrame) {
+          // Moving forward
+          for (let i = this.currentFrame + 1; i <= targetFrame; i++) {
+            if (!this.renderedFrames.has(i)) {
+              framesToRender.push(i);
             }
           }
-
-          tempCtx.putImageData(imageData, 0, 0);
-          ctx.drawImage(tempCanvas, frame.dims.left, frame.dims.top);
-        }
-
-        const mesh = this.renderObj.getObject3D("mesh") as Mesh;
-        if (mesh && mesh.material && "map" in mesh.material) {
-          const material = mesh.material as any;
-          if (material.map) {
-            material.map.needsUpdate = true;
+        } else {
+          // Wrapped around to beginning of loop
+          for (
+            let i = this.currentFrame + 1;
+            i < this.parsedFrames.length;
+            i++
+          ) {
+            if (!this.renderedFrames.has(i)) {
+              framesToRender.push(i);
+            }
+          }
+          for (let i = 0; i <= targetFrame; i++) {
+            if (!this.renderedFrames.has(i)) {
+              framesToRender.push(i);
+            }
           }
         }
+      }
 
-        this.currentFrame = targetFrame;
+      // Render frames (but limit to avoid blocking)
+      const MAX_FRAMES_PER_TICK = 4;
+      const framesToRenderNow = framesToRender.slice(0, MAX_FRAMES_PER_TICK);
+
+      for (const frameIndex of framesToRenderNow) {
+        this.renderFrame(ctx, canvas, frameIndex);
+        this.renderedFrames.add(frameIndex);
+      }
+
+      if (framesToRenderNow.length > 0) {
+        this.currentFrame = framesToRenderNow[framesToRenderNow.length - 1];
       }
 
       requestAnimationFrame(this.render.bind(this));
     } else {
       requestAnimationFrame(this.render.bind(this));
+    }
+  }
+  private renderFrame(
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    frameIndex: number
+  ) {
+    if (!this.parsedFrames) return;
+
+    const frame = this.parsedFrames[frameIndex];
+
+    if (
+      frame.disposalType === 2 ||
+      frame.disposalType === 3 ||
+      frameIndex === 0
+    ) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = frame.dims.width;
+    tempCanvas.height = frame.dims.height;
+    const tempCtx = tempCanvas.getContext("2d");
+
+    if (tempCtx) {
+      const imageData = tempCtx.createImageData(
+        frame.dims.width,
+        frame.dims.height
+      );
+      imageData.data.set(frame.patch);
+
+      if (this.transparencyTargetExpanded) {
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+
+          if (
+            r >= this.transparencyTargetExpanded.redMin &&
+            r <= this.transparencyTargetExpanded.redMax &&
+            g >= this.transparencyTargetExpanded.greenMin &&
+            g <= this.transparencyTargetExpanded.greenMax &&
+            b >= this.transparencyTargetExpanded.blueMin &&
+            b <= this.transparencyTargetExpanded.blueMax
+          ) {
+            data[i + 3] = 0;
+          }
+        }
+      }
+
+      tempCtx.putImageData(imageData, 0, 0);
+      ctx.drawImage(tempCanvas, frame.dims.left, frame.dims.top);
+    }
+
+    const mesh = this.renderObj?.getObject3D("mesh") as Mesh;
+    if (mesh && mesh.material && "map" in mesh.material) {
+      const material = mesh.material as any;
+      if (material.map) {
+        material.map.needsUpdate = true;
+      }
     }
   }
 }

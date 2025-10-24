@@ -35,7 +35,7 @@ const vectorRotationLimits: TVector3Limits = {
 
 const hlsVideoTarget = new HlsVideoRenderTarget({
   name: "Video Target",
-  videoUrl: demoVideos.cityMorphDino,
+  videoUrl: demoVideos.streetFighterWithAudio,
   markerDimensions,
   scaleVector: {
     x: 1.05,
@@ -71,7 +71,7 @@ const gifTarget = new GifRenderTarget({
     blue: 5,
     green: 5,
     red: 5,
-    tolerance: 10 / 255,
+    tolerance: 70 / 255,
   },
   vectorRotationLimits,
 });

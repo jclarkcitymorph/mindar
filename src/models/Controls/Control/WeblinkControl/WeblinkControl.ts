@@ -47,7 +47,7 @@ export default class WeblinkControl extends Control {
     button.addEventListener("pointerup", () => {
       this.updateImageSrc("Default");
       this.state = "Default";
-      window.open(this.weblinkUrl, "_blank");
+      window.open(this.weblinkUrl, "_self");
     });
   }
   private updateImageSrc(state: TWeblinkControlStates) {

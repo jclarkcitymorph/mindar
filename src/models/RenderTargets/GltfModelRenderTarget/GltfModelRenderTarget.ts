@@ -12,6 +12,7 @@ import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import type { TVector2 } from "../../../types/TVector2";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
+import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
 
 type TGltfModelRenderTarget = {
   modelName: string;
@@ -28,6 +29,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
   protected renderObj: Entity | undefined;
   protected modelName: string;
   protected modelPath: string;
+  protected originOffsetVector: TVector3;
 
   constructor(input: TGltfModelRenderTarget) {
     super();
@@ -41,6 +43,8 @@ export default class GltfModelRenderTarget extends RenderTarget {
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
     this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
+    this.originOffsetVector =
+      input.originOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
   }
 
   public init(): Promise<void> {

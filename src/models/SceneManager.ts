@@ -9,6 +9,8 @@ import CornerRenderData from "./CornerRenderData";
 import FpsData from "./FpsData";
 import type RenderTarget from "./RenderTargets/RenderTarget";
 import AFrameRayCaster from "./AFrameRayCaster";
+import type { TMarkerData } from "../types/TMarkerData";
+import PubSub from "./PubSub/PubSub";
 
 type TSceneHtmlElements = {
   scene: Scene;
@@ -17,7 +19,7 @@ type TSceneHtmlElements = {
 };
 
 const { Vector3, Quaternion, Euler } = THREE;
-const HISTORICS_TO_TRACK = 12;
+const HISTORICS_TO_TRACK = 6;
 
 type TSceneManagerInput = {
   renderTargets: RenderTarget[];
@@ -29,26 +31,7 @@ export default class SceneManager {
   private htmlElements: TSceneHtmlElements;
   private flags: TSceneFlags;
   private fpsData: FpsData;
-  private markerData: {
-    found: boolean;
-    current: {
-      position: InstanceType<typeof Vector3>;
-      scale: InstanceType<typeof Vector3>;
-      rotation: InstanceType<typeof Vector3>;
-      quaternion: InstanceType<typeof Quaternion>;
-      euler: InstanceType<typeof Euler>;
-    };
-    historic: Array<{
-      position: { x: number; y: number; z: number };
-      quaternion: { x: number; y: number; z: number; w: number }; // Changed from rotation
-      scale: { x: number; y: number; z: number };
-    }>;
-    average: {
-      position: { x: number; y: number; z: number };
-      quaternion: { x: number; y: number; z: number; w: number }; // Changed from rotation
-      scale: { x: number; y: number; z: number };
-    };
-  };
+  private markerData: TMarkerData;
   private cornerData: Record<TCorners, CornerRenderData>;
   private renderTargets: RenderTarget[];
   private aFrameRayCaster: AFrameRayCaster | undefined;
@@ -340,7 +323,6 @@ export default class SceneManager {
       this.markerData.found = true;
       if (!this.flags.sceneStarted) {
         this.flags.sceneStarted = true;
-        this.renderTargets.forEach((t) => t.onFirstSeen());
         document.querySelector(".mindar-ui-scanning")?.remove();
       }
       if (this.debug.isDebugging) {
@@ -351,7 +333,7 @@ export default class SceneManager {
         marker: this.markerData,
         corners: this.cornerData,
       };
-      this.renderTargets.forEach((t) => t.onMarkerFound(data));
+      PubSub.onMarkerFound(data);
     });
     marker.addEventListener("targetLost", () => {
       this.markerData.found = false;
@@ -363,7 +345,7 @@ export default class SceneManager {
         marker: this.markerData,
         corners: this.cornerData,
       };
-      this.renderTargets.forEach((t) => t.onMarkerLost(data));
+      PubSub.onMarkerLost(data);
     });
   }
   private syncCameraProperties() {

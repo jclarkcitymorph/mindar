@@ -20,6 +20,7 @@
     "@tensorflow/tfjs-node": "^4.22.0",
     "aframe": "^1.7.1",
     "canvas": "^3.1.2",
+    "gifuct-js": "^2.1.2",
     "hls.js": "^1.6.11",
     "jsdom": "^26.1.0",
     "mind-ar": "^1.2.5",

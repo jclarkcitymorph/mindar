@@ -8,19 +8,18 @@
   align-items: center;
   z-index: 1000;
   transition: transform .15s ease-in-out;
+  padding-bottom: 1rem;
+  
 }
 
 .controls {
   width: 100%;
-  max-width: 600px;
+  max-width: 280px;
   height: 6rem;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 1rem;
-  padding-left: .5rem;
-  padding-right: .5rem;
 }
 
 .active {

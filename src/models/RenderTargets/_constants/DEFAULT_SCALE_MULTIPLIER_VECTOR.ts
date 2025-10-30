@@ -1,4 +1,4 @@
-import type { TVector3 } from "../../../types/TVector3";
+import type { TVector3 } from "../../../types/models/render/TVector3";
 
 export default {
   x: 1,

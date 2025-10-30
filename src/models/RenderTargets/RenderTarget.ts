@@ -1,8 +1,11 @@
 import type { Entity } from "aframe";
-import type { TCorners } from "../../types/TCorners";
-import type { TRenderData } from "../../types/TRenderData";
-import type { TVector2 } from "../../types/TVector2";
-import type { TVector3, TVector3Limits } from "../../types/TVector3";
+import type { TCorners } from "../../types/models/render/TCorners";
+import type { TRenderData } from "../../types/models/render/TRenderData";
+import type { TVector2 } from "../../types/models/render/TVector2";
+import type {
+  TVector3,
+  TVector3Limits,
+} from "../../types/models/render/TVector3";
 import type CornerRenderData from "../CornerRenderData";
 import type RenderData from "../RenderData";
 const { Vector3, Quaternion, Euler } = THREE;
@@ -25,11 +28,11 @@ type TRenderTargetUpdateData = {
 
 export type TRenderTargetConstructorInput = {
   name: string;
-  markerDimensions: TVector2;
   positionalOffsetVector?: TVector3;
   originOffsetVector?: TVector3;
   scaleVector?: TVector3;
   vectorRotationLimits?: TVector3Limits;
+  markerDimensions: TVector2;
 };
 
 export default abstract class RenderTarget {

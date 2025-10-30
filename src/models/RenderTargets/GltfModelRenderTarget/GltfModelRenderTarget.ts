@@ -1,22 +1,26 @@
 import RenderTarget from "../RenderTarget";
 import RenderData from "../../RenderData";
-import type { TVector3, TVector3Limits } from "../../../types/TVector3";
+import type {
+  TVector3,
+  TVector3Limits,
+} from "../../../types/models/render/TVector3";
 import type {
   TRenderTargetConstructorInput,
   TRenderTargetUpdateData,
 } from "../RenderTarget";
-import type { TRenderData } from "../../../types/TRenderData";
+import type { TRenderData } from "../../../types/models/render/TRenderData";
 import type { Entity } from "aframe";
 import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
-import type { TVector2 } from "../../../types/TVector2";
+import type { TVector2 } from "../../../types/models/render/TVector2";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
 
-type TGltfModelRenderTarget = {
+export type TGltfModelRenderTarget = {
   modelName: string;
-  modelPath: string;
+  modelUrl: string;
+  scaleVector: TVector3;
 } & TRenderTargetConstructorInput;
 
 export default class GltfModelRenderTarget extends RenderTarget {
@@ -28,7 +32,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
   protected renderData: RenderData;
   protected renderObj: Entity | undefined;
   protected modelName: string;
-  protected modelPath: string;
+  protected modelUrl: string;
   protected originOffsetVector: TVector3;
 
   constructor(input: TGltfModelRenderTarget) {
@@ -38,7 +42,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
     this.positionalOffsetVector =
       input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
     this.modelName = input.modelName;
-    this.modelPath = input.modelPath;
+    this.modelUrl = input.modelUrl;
     this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
@@ -75,7 +79,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
   public createAssets() {
     const asset = document.createElement("a-asset-item");
     asset.setAttribute("id", this.modelName);
-    asset.setAttribute("src", this.modelPath);
+    asset.setAttribute("src", this.modelUrl);
     asset.setAttribute("response-type", "arraybuffer");
     return [asset];
   }

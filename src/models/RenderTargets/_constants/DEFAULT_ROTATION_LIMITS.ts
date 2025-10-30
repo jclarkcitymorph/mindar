@@ -1,4 +1,4 @@
-import type { TVector3Limits } from "../../../types/TVector3";
+import type { TVector3Limits } from "../../../types/models/render/TVector3";
 
 export default {
   x: {

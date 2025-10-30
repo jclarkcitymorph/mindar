@@ -1,11 +1,14 @@
-import type { TVector3, TVector3Limits } from "../../../types/TVector3";
+import type {
+  TVector3,
+  TVector3Limits,
+} from "../../../types/models/render/TVector3";
 import type {
   TRenderTargetConstructorInput,
   TRenderTargetUpdateData,
 } from "../RenderTarget";
-import type { TRenderData } from "../../../types/TRenderData";
+import type { TRenderData } from "../../../types/models/render/TRenderData";
 import type { Entity } from "aframe";
-import type { TVector2 } from "../../../types/TVector2";
+import type { TVector2 } from "../../../types/models/render/TVector2";
 import Hls from "hls.js";
 import RenderTarget from "../RenderTarget";
 import RenderData from "../../RenderData";
@@ -14,8 +17,9 @@ import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
+import dimensionsFromAspectRatio from "../../../utils/math/dimensionsFromAspectRatio";
 
-type THlsOnClickInput = {
+export type THlsOnClickInput = {
   markerDimensions?: TVector2;
   positionalOffsetVector?: TVector3;
   scaleVector?: TVector3;
@@ -28,9 +32,9 @@ type THlsOnClickInput = {
   imageUrl?: string;
 };
 
-type THlsVideoRenderTargetInput = {
-  videoDimensions: TVector2;
+export type THlsVideoRenderTargetInput = {
   videoUrl: string;
+  aspectRatio: number;
 } & TRenderTargetConstructorInput;
 
 export default class HlsVideoRenderTarget extends RenderTarget {
@@ -57,7 +61,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
     this.videoUrl = input.videoUrl;
-    this.videoDimensions = input.videoDimensions;
+    this.videoDimensions = dimensionsFromAspectRatio(input.aspectRatio);
     this.originOffsetVector =
       input.originOffsetVector ?? DEFAULT_ORIGIN_OFFSET_VECTOR;
   }

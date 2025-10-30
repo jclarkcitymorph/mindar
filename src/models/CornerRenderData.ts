@@ -1,5 +1,5 @@
-import type { TDimensions } from "../types/TDimensions";
-import type { TVector3 } from "../types/TVector3";
+import type { TDimensions } from "../types/models/render/TDimensions";
+import type { TVector3 } from "../types/models/render/TVector3";
 
 export default class CornerRenderData {
   private vector: TVector3;

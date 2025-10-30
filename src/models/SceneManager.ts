@@ -1,15 +1,15 @@
-import type { TSceneFlags } from "../types/TSceneFlags";
+import type { TSceneFlags } from "../types/models/render/TSceneFlags";
 import type { Entity, Scene } from "aframe";
-import type { TDebug } from "../types/TDebug";
-import type { TCorners } from "../types/TCorners";
-import type { TRenderData } from "../types/TRenderData";
+import type { TDebug } from "../types/models/render/TDebug";
+import type { TCorners } from "../types/models/render/TCorners";
+import type { TRenderData } from "../types/models/render/TRenderData";
 //
 // import AFRAME from "aframe";
 import CornerRenderData from "./CornerRenderData";
 import FpsData from "./FpsData";
 import type RenderTarget from "./RenderTargets/RenderTarget";
 import AFrameRayCaster from "./AFrameRayCaster";
-import type { TMarkerData } from "../types/TMarkerData";
+import type { TMarkerData } from "../types/models/render/TMarkerData";
 import PubSub from "./PubSub/PubSub";
 
 type TSceneHtmlElements = {
@@ -24,6 +24,7 @@ const HISTORICS_TO_TRACK = 6;
 type TSceneManagerInput = {
   renderTargets: RenderTarget[];
   isDebugging: boolean;
+  mindFileUrl: string;
 };
 
 export default class SceneManager {
@@ -35,10 +36,12 @@ export default class SceneManager {
   private cornerData: Record<TCorners, CornerRenderData>;
   private renderTargets: RenderTarget[];
   private aFrameRayCaster: AFrameRayCaster | undefined;
-  constructor({ renderTargets, isDebugging }: TSceneManagerInput) {
+  private mindFileUrl: string;
+  constructor({ renderTargets, isDebugging, mindFileUrl }: TSceneManagerInput) {
     this.flags = {
       sceneStarted: false,
     };
+    this.mindFileUrl = mindFileUrl;
     this.fpsData = new FpsData();
     this.markerData = {
       found: false,
@@ -100,7 +103,7 @@ export default class SceneManager {
     const scene = document.createElement("a-scene") as Scene;
     scene.setAttribute("id", "scene");
     scene.setAttribute("frame-scene", "");
-    scene.setAttribute("mindar-image", "imageTargetSrc: ./targets.mind;");
+    scene.setAttribute("mindar-image", `imageTargetSrc: ${this.mindFileUrl}`);
     scene.setAttribute("vr-mode-ui", "enabled: false");
     scene.setAttribute("device-orientation-permission-ui", "enabled: false");
 

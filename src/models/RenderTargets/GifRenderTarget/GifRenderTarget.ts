@@ -1,17 +1,20 @@
-import type { TVector3, TVector3Limits } from "../../../types/TVector3";
+import type {
+  TVector3,
+  TVector3Limits,
+} from "../../../types/models/render/TVector3";
 import type {
   TRenderTargetConstructorInput,
   TRenderTargetUpdateData,
 } from "../RenderTarget";
 import type { Entity } from "aframe";
-import type { TVector2 } from "../../../types/TVector2";
+import type { TVector2 } from "../../../types/models/render/TVector2";
 import RenderTarget from "../RenderTarget";
 import RenderData from "../../RenderData";
 import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
 import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
-import type { TRenderData } from "../../../types/TRenderData";
+import type { TRenderData } from "../../../types/models/render/TRenderData";
 import {
   parseGIF,
   decompressFrames,
@@ -21,21 +24,22 @@ import {
 import type { Mesh } from "three";
 import PubSub from "../../PubSub/PubSub";
 import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
+import dimensionsFromAspectRatio from "../../../utils/math/dimensionsFromAspectRatio";
 
-type TGifRenderTargetInput = {
-  dimensions: TVector2;
-  gifUrl: string;
+export type TGifRenderTargetInput = {
+  objUrl: string;
+  aspectRatio: number;
   transparencyTarget?: TGifTransparencyTarget;
 } & TRenderTargetConstructorInput;
 
-type TGifTransparencyTarget = {
+export type TGifTransparencyTarget = {
   red: number; // 0 - 255
   green: number; // 0 - 255
   blue: number; // 0 - 255
   tolerance: number; // 0 - 1
 };
 
-type TGifTransparencyTargetExpanded = {
+export type TGifTransparencyTargetExpanded = {
   redMin: number;
   redMax: number;
   greenMin: number;
@@ -54,7 +58,7 @@ export default class GifRenderTarget extends RenderTarget {
   protected vectorRotationLimits: TVector3Limits;
   protected renderObj: Entity | undefined;
   protected gifElement: HTMLCanvasElement | undefined;
-  protected gifUrl: string;
+  protected objUrl: string;
   protected dimensions: TVector2;
   protected transparencyTargetExpanded:
     | TGifTransparencyTargetExpanded
@@ -82,8 +86,8 @@ export default class GifRenderTarget extends RenderTarget {
     this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
-    this.dimensions = input.dimensions;
-    this.gifUrl = input.gifUrl;
+    this.dimensions = dimensionsFromAspectRatio(input.aspectRatio);
+    this.objUrl = input.objUrl;
     this.originOffsetVector =
       input.originOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
     this.registerOnFirstSceneListener();
@@ -112,7 +116,7 @@ export default class GifRenderTarget extends RenderTarget {
       this.gifElement = canvas;
       canvas.id = `${this.name}-canvas`;
 
-      fetch(this.gifUrl)
+      fetch(this.objUrl)
         .then((res) => res.arrayBuffer())
         .then((buffer) => {
           this.parsedGif = parseGIF(buffer);

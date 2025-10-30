@@ -1,5 +1,5 @@
-import type { TCorners } from "../../types/TCorners";
-import type { TMarkerData } from "../../types/TMarkerData";
+import type { TCorners } from "../../types/models/render/TCorners";
+import type { TMarkerData } from "../../types/models/render/TMarkerData";
 import type CornerRenderData from "../CornerRenderData";
 
 type MarkerEventData = {

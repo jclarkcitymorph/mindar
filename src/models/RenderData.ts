@@ -1,5 +1,5 @@
-import type { TRenderData } from "../types/TRenderData";
-import type { TVector3 } from "../types/TVector3";
+import type { TRenderData } from "../types/models/render/TRenderData";
+import type { TVector3 } from "../types/models/render/TVector3";
 
 export default class RenderData {
   private data: TRenderData;

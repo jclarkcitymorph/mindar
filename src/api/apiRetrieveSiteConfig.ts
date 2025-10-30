@@ -90,6 +90,12 @@ export default async function apiRetrieveSiteConfig({}: {
                   z: 0,
                 },
                 scaleVector: 0.5,
+                transparencyTarget: {
+                  red: 10,
+                  green: 10,
+                  blue: 10,
+                  tolerance: 0.1,
+                },
               },
             },
           ],

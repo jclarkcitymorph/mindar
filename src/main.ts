@@ -96,7 +96,7 @@ async function main() {
 
     new SceneManager({
       isDebugging: false,
-      renderTargets: [],
+      renderTargets,
       mindFileUrl,
     });
   } catch (error) {

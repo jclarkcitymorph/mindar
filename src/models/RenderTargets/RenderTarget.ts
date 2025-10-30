@@ -8,6 +8,7 @@ import type {
 } from "../../types/models/render/TVector3";
 import type CornerRenderData from "../CornerRenderData";
 import type RenderData from "../RenderData";
+import type { TVector } from "../../types/models/render/TVector";
 const { Vector3, Quaternion, Euler } = THREE;
 // Abstracted goal of this is to have different types of render targets with abstract methods for how to handle them within the scene
 type TRenderTargetUpdateData = {
@@ -30,7 +31,7 @@ export type TRenderTargetConstructorInput = {
   name: string;
   positionalOffsetVector?: TVector3;
   originOffsetVector?: TVector3;
-  scaleVector?: TVector3;
+  scaleVector?: TVector | TVector2 | TVector3;
   vectorRotationLimits?: TVector3Limits;
   markerDimensions: TVector2;
 };
@@ -40,7 +41,7 @@ export default abstract class RenderTarget {
   protected abstract markerDimensions: TVector2;
   protected abstract positionalOffsetVector: TVector3;
   protected abstract originOffsetVector: TVector3;
-  protected abstract scaleVector: TVector3;
+  protected abstract scaleVector: TVector | TVector2 | TVector3;
   protected abstract renderData: RenderData;
   protected abstract renderObj: Entity | undefined;
 

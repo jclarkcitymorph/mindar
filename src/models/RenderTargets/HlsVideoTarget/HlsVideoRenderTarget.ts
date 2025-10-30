@@ -15,14 +15,14 @@ import RenderData from "../../RenderData";
 import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
-import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
 import dimensionsFromAspectRatio from "../../../utils/math/dimensionsFromAspectRatio";
+import type { TVector } from "../../../types/models/render/TVector";
 
 export type THlsOnClickInput = {
   markerDimensions?: TVector2;
   positionalOffsetVector?: TVector3;
-  scaleVector?: TVector3;
+  scaleVector?: TVector;
   renderData?: RenderData;
   vectorRotationLimits?: TVector3Limits;
   renderObj?: Entity | undefined;
@@ -35,6 +35,7 @@ export type THlsOnClickInput = {
 export type THlsVideoRenderTargetInput = {
   videoUrl: string;
   aspectRatio: number;
+  scaleVector: TVector;
 } & TRenderTargetConstructorInput;
 
 export default class HlsVideoRenderTarget extends RenderTarget {
@@ -42,7 +43,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
   protected originOffsetVector: TVector3;
-  protected scaleVector: TVector3;
+  protected scaleVector: TVector;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
   protected renderObj: Entity | undefined;
@@ -53,7 +54,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
   constructor(input: THlsVideoRenderTargetInput) {
     super();
     this.name = input.name;
-    this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
+    this.scaleVector = input.scaleVector || 1;
     this.markerDimensions = input.markerDimensions;
     this.positionalOffsetVector =
       input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
@@ -167,9 +168,9 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     );
 
     const finalScale = {
-      x: avgMarkerData.scale.x * this.scaleVector.x,
-      y: avgMarkerData.scale.y * this.scaleVector.y,
-      z: avgMarkerData.scale.z * this.scaleVector.z,
+      x: avgMarkerData.scale.x * this.scaleVector,
+      y: avgMarkerData.scale.y * this.scaleVector,
+      z: avgMarkerData.scale.z,
     };
 
     avgMarkerData.position.x =

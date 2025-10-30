@@ -13,7 +13,6 @@ import RenderData from "../../RenderData";
 import { clamp } from "three/src/math/MathUtils.js";
 import DEFAULT_ROTATION_LIMITS from "../_constants/DEFAULT_ROTATION_LIMITS";
 import DEFAULT_POSITIONAL_OFFSET_VECTOR from "../_constants/DEFAULT_POSITIONAL_OFFSET_VECTOR";
-import DEFAULT_SCALE_MULTIPLIER_VECTOR from "../_constants/DEFAULT_SCALE_MULTIPLIER_VECTOR";
 import type { TRenderData } from "../../../types/models/render/TRenderData";
 import {
   parseGIF,
@@ -25,11 +24,13 @@ import type { Mesh } from "three";
 import PubSub from "../../PubSub/PubSub";
 import DEFAULT_ORIGIN_OFFSET_VECTOR from "../_constants/DEFAULT_ORIGIN_OFFSET_VECTOR";
 import dimensionsFromAspectRatio from "../../../utils/math/dimensionsFromAspectRatio";
+import type { TVector } from "../../../types/models/render/TVector";
 
 export type TGifRenderTargetInput = {
   objUrl: string;
   aspectRatio: number;
   transparencyTarget?: TGifTransparencyTarget;
+  scaleVector: TVector;
 } & TRenderTargetConstructorInput;
 
 export type TGifTransparencyTarget = {
@@ -53,7 +54,7 @@ export default class GifRenderTarget extends RenderTarget {
   protected markerDimensions: TVector2;
   protected positionalOffsetVector: TVector3;
   protected originOffsetVector: TVector3;
-  protected scaleVector: TVector3;
+  protected scaleVector: TVector;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
   protected renderObj: Entity | undefined;
@@ -79,7 +80,7 @@ export default class GifRenderTarget extends RenderTarget {
   constructor(input: TGifRenderTargetInput) {
     super();
     this.name = input.name;
-    this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
+    this.scaleVector = input.scaleVector || 1;
     this.markerDimensions = input.markerDimensions;
     this.positionalOffsetVector =
       input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
@@ -169,8 +170,14 @@ export default class GifRenderTarget extends RenderTarget {
       renderObj.setAttribute("position", "1000 1000 -10");
       renderObj.setAttribute("rotation", "0 0 0");
       renderObj.setAttribute("scale", "1 1 1");
-      renderObj.setAttribute("width", this.dimensions.x.toString());
-      renderObj.setAttribute("height", this.dimensions.y.toString());
+      renderObj.setAttribute(
+        "width",
+        (this.dimensions.x * this.scaleVector).toString()
+      );
+      renderObj.setAttribute(
+        "height",
+        (this.dimensions.y * this.scaleVector).toString()
+      );
       renderObj.setAttribute("visible", "true");
 
       // Use canvas with transparency
@@ -216,9 +223,9 @@ export default class GifRenderTarget extends RenderTarget {
 
     // Step 2: Calculate final scale
     const finalScale = {
-      x: avgMarkerData.scale.x * this.scaleVector.x,
-      y: avgMarkerData.scale.y * this.scaleVector.y,
-      z: avgMarkerData.scale.z * this.scaleVector.z,
+      x: avgMarkerData.scale.x * this.scaleVector,
+      y: avgMarkerData.scale.y * this.scaleVector,
+      z: avgMarkerData.scale.z * 1,
     };
 
     // Step 3: Calculate the attachment point offset in marker's local space

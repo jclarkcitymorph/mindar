@@ -53,11 +53,7 @@ export default async function apiRetrieveSiteConfig({}: {
                 name: "hls1",
                 videoUrl: demoVideos.streetFighterWithAudio,
                 aspectRatio: 1.754385965,
-                scaleVector: {
-                  x: 1.05,
-                  y: 1.05,
-                  z: 1,
-                },
+                scaleVector: 1.05,
               },
             },
             {
@@ -71,11 +67,7 @@ export default async function apiRetrieveSiteConfig({}: {
                   y: -0.9,
                   z: 0.1,
                 },
-                scaleVector: {
-                  x: 0.85,
-                  y: 0.85,
-                  z: 1,
-                },
+                scaleVector: 0.85,
                 originOffsetVector: {
                   x: 0,
                   y: -1,
@@ -105,11 +97,7 @@ export default async function apiRetrieveSiteConfig({}: {
                   y: 1,
                   z: 0,
                 },
-                scaleVector: {
-                  x: 0.5,
-                  y: 0.5,
-                  z: 1,
-                },
+                scaleVector: 0.5,
               },
             },
           ],

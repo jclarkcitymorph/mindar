@@ -236,7 +236,7 @@ export default class GifRenderTarget extends RenderTarget {
         this.positionalOffsetVector.x *
         0.5,
       y:
-        this.markerDimensions.x *
+        this.markerDimensions.y *
         avgMarkerData.scale.y *
         this.positionalOffsetVector.y *
         0.5,

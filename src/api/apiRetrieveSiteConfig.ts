@@ -115,7 +115,7 @@ export default async function apiRetrieveSiteConfig({}: {
                   y: 0,
                   z: 0,
                 },
-                scaleVector: 0.75,
+                scaleVector: 0.5,
               },
             },
             {
@@ -135,7 +135,7 @@ export default async function apiRetrieveSiteConfig({}: {
                   y: 0,
                   z: 0,
                 },
-                scaleVector: 1,
+                scaleVector: 0.5,
               },
             },
           ],

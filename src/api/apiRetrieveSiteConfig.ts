@@ -11,10 +11,10 @@ const demoVideos = {
   streetFighterWithAudio:
     "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/bab4eed3-a93e-4dff-ae47-6a29195f2a23/playlist.m3u8",
 };
-// const cityMorphInformationGifUrl =
-//   "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/testgif.gif";
-// const cityMorphLogoGifUrl =
-//   "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif";
+const cityMorphInformationGifUrl =
+  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/testgif.gif";
+const cityMorphLogoGifUrl =
+  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif";
 
 export default async function apiRetrieveSiteConfig({}: {
   decomposedUrlData: TDecomposedUrlData;
@@ -60,56 +60,58 @@ export default async function apiRetrieveSiteConfig({}: {
                 },
               },
             },
-            // {
-            //   type: "gif",
-            //   data: {
-            //     name: "gif1",
-            //     objUrl: cityMorphInformationGifUrl,
-            //     aspectRatio: 1.714285712,
-            //     positionalOffsetVector: {
-            //       x: 0,
-            //       y: -0.9,
-            //       z: 0.1,
-            //     },
-            //     // scaleVector: {
-            //     //   x: 0.85,
-            //     //   y: 0.85,
-            //     // },
-            //     originOffsetVector: {
-            //       x: 0,
-            //       y: -1,
-            //       z: 0,
-            //     },
-            //     transparencyTarget: {
-            //       blue: 5,
-            //       green: 5,
-            //       red: 5,
-            //       tolerance: 70 / 255,
-            //     },
-            //   },
-            // },
-            // {
-            //   type: "gif",
-            //   data: {
-            //     name: "gif2",
-            //     objUrl: cityMorphLogoGifUrl,
-            //     aspectRatio: 1.214285715,
-            //     positionalOffsetVector: {
-            //       x: 0,
-            //       y: 1.2,
-            //       z: 0,
-            //     },
-            //     originOffsetVector: {
-            //       x: 0,
-            //       y: 1,
-            //       z: 0,
-            //     },
-            //     // scaleVector: {
-            //     //   x: 0.5,
-            //     //   y: 0.5,
-            //     // },
-            //   },
-            // },
+            {
+              type: "gif",
+              data: {
+                name: "gif1",
+                objUrl: cityMorphInformationGifUrl,
+                aspectRatio: 1.714285712,
+                positionalOffsetVector: {
+                  x: 0,
+                  y: -0.9,
+                  z: 0.1,
+                },
+                scaleVector: {
+                  x: 0.85,
+                  y: 0.85,
+                  z: 1,
+                },
+                originOffsetVector: {
+                  x: 0,
+                  y: -1,
+                  z: 0,
+                },
+                transparencyTarget: {
+                  blue: 5,
+                  green: 5,
+                  red: 5,
+                  tolerance: 70 / 255,
+                },
+              },
+            },
+            {
+              type: "gif",
+              data: {
+                name: "gif2",
+                objUrl: cityMorphLogoGifUrl,
+                aspectRatio: 1.214285715,
+                positionalOffsetVector: {
+                  x: 0,
+                  y: 1.2,
+                  z: 0,
+                },
+                originOffsetVector: {
+                  x: 0,
+                  y: 1,
+                  z: 0,
+                },
+                scaleVector: {
+                  x: 0.5,
+                  y: 0.5,
+                  z: 1,
+                },
+              },
+            },
           ],
         },
       },

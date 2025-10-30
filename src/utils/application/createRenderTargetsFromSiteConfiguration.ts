@@ -21,8 +21,8 @@ export default function createRenderTargetsFromSiteConfiguration(
             aspectRatio: t.data.aspectRatio,
             markerDimensions,
             videoUrl: t.data.videoUrl,
-            originOffsetVector: t.data.originOffsetVector,
-            positionalOffsetVector: t.data.positionalOffsetVector,
+            localOffsetVector: t.data.localOffsetVector,
+            markerOffsetVector: t.data.markerOffsetVector,
             scaleVector: t.data.scaleVector,
             vectorRotationLimits:
               siteConfiguration.render.globalRotationLimits ||
@@ -38,8 +38,8 @@ export default function createRenderTargetsFromSiteConfiguration(
             aspectRatio: t.data.aspectRatio,
             markerDimensions,
             objUrl: t.data.objUrl,
-            originOffsetVector: t.data.originOffsetVector,
-            positionalOffsetVector: t.data.positionalOffsetVector,
+            localOffsetVector: t.data.localOffsetVector,
+            markerOffsetVector: t.data.markerOffsetVector,
             scaleVector: t.data.scaleVector,
             transparencyTarget: t.data.transparencyTarget,
             vectorRotationLimits:
@@ -56,8 +56,8 @@ export default function createRenderTargetsFromSiteConfiguration(
             markerDimensions,
             modelName: t.data.modelName,
             modelUrl: t.data.modelUrl,
-            originOffsetVector: t.data.originOffsetVector,
-            positionalOffsetVector: t.data.positionalOffsetVector,
+            localOffsetVector: t.data.localOffsetVector,
+            markerOffsetVector: t.data.markerOffsetVector,
             scaleVector: t.data.scaleVector,
             vectorRotationLimits:
               siteConfiguration.render.globalRotationLimits ||

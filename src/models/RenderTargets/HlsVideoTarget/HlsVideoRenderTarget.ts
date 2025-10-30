@@ -21,7 +21,7 @@ import type { TVector } from "../../../types/models/render/TVector";
 
 export type THlsOnClickInput = {
   markerDimensions?: TVector2;
-  positionalOffsetVector?: TVector3;
+  markerOffsetVector?: TVector3;
   scaleVector?: TVector;
   renderData?: RenderData;
   vectorRotationLimits?: TVector3Limits;
@@ -41,8 +41,8 @@ export type THlsVideoRenderTargetInput = {
 export default class HlsVideoRenderTarget extends RenderTarget {
   protected name: string;
   protected markerDimensions: TVector2;
-  protected positionalOffsetVector: TVector3;
-  protected originOffsetVector: TVector3;
+  protected markerOffsetVector: TVector3;
+  protected localOffsetVector: TVector3;
   protected scaleVector: TVector;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
@@ -56,15 +56,15 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     this.name = input.name;
     this.scaleVector = input.scaleVector || 1;
     this.markerDimensions = input.markerDimensions;
-    this.positionalOffsetVector =
-      input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
+    this.markerOffsetVector =
+      input.markerOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
     this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
     this.videoUrl = input.videoUrl;
     this.videoDimensions = dimensionsFromAspectRatio(input.aspectRatio);
-    this.originOffsetVector =
-      input.originOffsetVector ?? DEFAULT_ORIGIN_OFFSET_VECTOR;
+    this.localOffsetVector =
+      input.localOffsetVector ?? DEFAULT_ORIGIN_OFFSET_VECTOR;
   }
   public init(): Promise<void> {
     return new Promise((res, _rej) => {
@@ -132,7 +132,7 @@ export default class HlsVideoRenderTarget extends RenderTarget {
     if (this.onClickHandler) {
       this.onClickHandler({
         markerDimensions: this.markerDimensions,
-        positionalOffsetVector: this.positionalOffsetVector,
+        markerOffsetVector: this.markerOffsetVector,
         video: this.video,
         renderData: this.renderData,
         renderObj: this.renderObj,
@@ -177,17 +177,17 @@ export default class HlsVideoRenderTarget extends RenderTarget {
       avgMarkerData.position.x +
       this.markerDimensions.x *
         avgMarkerData.scale.x *
-        this.positionalOffsetVector.x *
+        this.markerOffsetVector.x *
         0.5;
     avgMarkerData.position.y =
       avgMarkerData.position.y +
       this.markerDimensions.y *
         avgMarkerData.scale.y *
-        this.positionalOffsetVector.y *
+        this.markerOffsetVector.y *
         0.5;
     avgMarkerData.position.z =
       avgMarkerData.position.z +
-      0 * avgMarkerData.scale.z * this.positionalOffsetVector.z * 0.5;
+      0 * avgMarkerData.scale.z * this.markerOffsetVector.z * 0.5;
 
     this.renderData.update({
       position: avgMarkerData.position,

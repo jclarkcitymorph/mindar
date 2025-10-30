@@ -52,8 +52,8 @@ export type TGifTransparencyTargetExpanded = {
 export default class GifRenderTarget extends RenderTarget {
   protected name: string;
   protected markerDimensions: TVector2;
-  protected positionalOffsetVector: TVector3;
-  protected originOffsetVector: TVector3;
+  protected markerOffsetVector: TVector3;
+  protected localOffsetVector: TVector3;
   protected scaleVector: TVector;
   protected renderData: RenderData;
   protected vectorRotationLimits: TVector3Limits;
@@ -79,18 +79,22 @@ export default class GifRenderTarget extends RenderTarget {
 
   constructor(input: TGifRenderTargetInput) {
     super();
+    const dimensions = dimensionsFromAspectRatio(input.aspectRatio);
     this.name = input.name;
     this.scaleVector = input.scaleVector || 1;
     this.markerDimensions = input.markerDimensions;
-    this.positionalOffsetVector =
-      input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
+    this.markerOffsetVector =
+      input.markerOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
     this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
-    this.dimensions = dimensionsFromAspectRatio(input.aspectRatio);
+    this.dimensions = {
+      x: dimensions.x * this.scaleVector,
+      y: dimensions.y * this.scaleVector,
+    };
     this.objUrl = input.objUrl;
-    this.originOffsetVector =
-      input.originOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
+    this.localOffsetVector =
+      input.localOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
     this.registerOnFirstSceneListener();
     if (input.transparencyTarget) {
       const { red, blue, green, tolerance } = input.transparencyTarget;
@@ -170,14 +174,8 @@ export default class GifRenderTarget extends RenderTarget {
       renderObj.setAttribute("position", "1000 1000 -10");
       renderObj.setAttribute("rotation", "0 0 0");
       renderObj.setAttribute("scale", "1 1 1");
-      renderObj.setAttribute(
-        "width",
-        (this.dimensions.x * this.scaleVector).toString()
-      );
-      renderObj.setAttribute(
-        "height",
-        (this.dimensions.y * this.scaleVector).toString()
-      );
+      renderObj.setAttribute("width", this.dimensions.x.toString());
+      renderObj.setAttribute("height", this.dimensions.y.toString());
       renderObj.setAttribute("visible", "true");
 
       // Use canvas with transparency
@@ -233,14 +231,14 @@ export default class GifRenderTarget extends RenderTarget {
       x:
         this.markerDimensions.x *
         avgMarkerData.scale.x *
-        this.positionalOffsetVector.x *
+        this.markerOffsetVector.x *
         0.5,
       y:
         this.markerDimensions.y *
         avgMarkerData.scale.y *
-        this.positionalOffsetVector.y *
+        this.markerOffsetVector.y *
         0.5,
-      z: 0 * avgMarkerData.scale.z * this.positionalOffsetVector.z * 0.5,
+      z: 0 * avgMarkerData.scale.z * this.markerOffsetVector.z * 0.5,
     };
 
     // Step 4: Calculate the child's origin offset in its local space
@@ -248,12 +246,12 @@ export default class GifRenderTarget extends RenderTarget {
       x:
         this.dimensions.x *
         avgMarkerData.scale.x *
-        this.originOffsetVector.x *
+        this.localOffsetVector.x *
         0.5,
       y:
         this.dimensions.y *
         avgMarkerData.scale.y *
-        this.originOffsetVector.y *
+        this.localOffsetVector.y *
         0.5,
       z: 0,
     };

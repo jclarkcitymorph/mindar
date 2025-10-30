@@ -26,29 +26,29 @@ export type TGltfModelRenderTarget = {
 export default class GltfModelRenderTarget extends RenderTarget {
   protected name: string;
   protected markerDimensions: TVector2;
-  protected positionalOffsetVector: TVector3;
+  protected markerOffsetVector: TVector3;
   protected scaleVector: TVector3;
   protected vectorRotationLimits: TVector3Limits;
   protected renderData: RenderData;
   protected renderObj: Entity | undefined;
   protected modelName: string;
   protected modelUrl: string;
-  protected originOffsetVector: TVector3;
+  protected localOffsetVector: TVector3;
 
   constructor(input: TGltfModelRenderTarget) {
     super();
     this.name = input.name;
     this.markerDimensions = input.markerDimensions;
-    this.positionalOffsetVector =
-      input.positionalOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
+    this.markerOffsetVector =
+      input.markerOffsetVector || DEFAULT_POSITIONAL_OFFSET_VECTOR;
     this.modelName = input.modelName;
     this.modelUrl = input.modelUrl;
     this.renderData = new RenderData();
     this.vectorRotationLimits =
       input.vectorRotationLimits || DEFAULT_ROTATION_LIMITS;
     this.scaleVector = input.scaleVector || DEFAULT_SCALE_MULTIPLIER_VECTOR;
-    this.originOffsetVector =
-      input.originOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
+    this.localOffsetVector =
+      input.localOffsetVector || DEFAULT_ORIGIN_OFFSET_VECTOR;
   }
 
   public init(): Promise<void> {
@@ -159,8 +159,8 @@ export default class GltfModelRenderTarget extends RenderTarget {
     // 2. Define the local offset position *ON* the marker plane (Z=0).
     // This defines the corner position (e.g., bottom-left is x:-1, y:-1).
     const localPositionOnPlane = new THREE.Vector3(
-      (this.markerDimensions.x / 2) * this.positionalOffsetVector.x,
-      (this.markerDimensions.y / 2) * this.positionalOffsetVector.y,
+      (this.markerDimensions.x / 2) * this.markerOffsetVector.x,
+      (this.markerDimensions.y / 2) * this.markerOffsetVector.y,
       0 // Crucial: Z must be 0 here to calculate the point on the marker surface
     );
 
@@ -177,7 +177,7 @@ export default class GltfModelRenderTarget extends RenderTarget {
 
     // The final world position is the point on the plane plus the small Z-offset along the marker's normal.
     const finalWorldPosition = worldPositionOnPlane.add(
-      markerZAxis.multiplyScalar(this.positionalOffsetVector.z)
+      markerZAxis.multiplyScalar(this.markerOffsetVector.z)
     );
 
     // Clamp Rotations (This section remains unchanged and is correct)

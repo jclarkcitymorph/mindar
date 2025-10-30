@@ -52,127 +52,41 @@ export default async function apiRetrieveSiteConfig({}: {
                 scaleVector: 1.05,
               },
             },
-            // {
-            //   type: "gif",
-            //   data: {
-            //     name: "gif1",
-            //     objUrl:
-            //       "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/testgif.gif",
-            //     aspectRatio: 1.714285712,
-            //     positionalOffsetVector: {
-            //       x: 0,
-            //       y: -0.9,
-            //       z: 0.1,
-            //     },
-            //     scaleVector: 0.85,
-            //     originOffsetVector: {
-            //       x: 0,
-            //       y: -1,
-            //       z: 0,
-            //     },
-            //     transparencyTarget: {
-            //       blue: 5,
-            //       green: 5,
-            //       red: 5,
-            //       tolerance: 70 / 255,
-            //     },
-            //   },
-            // },
+            {
+              type: "gif",
+              data: {
+                name: "logoGif",
+                objUrl:
+                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
+                aspectRatio: 1.214285715,
+                markerOffsetVector: {
+                  x: 0,
+                  y: 1,
+                  z: 0,
+                },
+                localOffsetVector: {
+                  x: 0,
+                  y: 1,
+                  z: 0,
+                },
+                scaleVector: 0.35,
+              },
+            },
             {
               type: "gif",
               data: {
                 name: "gif2",
                 objUrl:
-                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
-                aspectRatio: 1.214285715,
-                positionalOffsetVector: {
-                  x: 0,
-                  y: 0,
-                  z: 0,
-                },
-                originOffsetVector: {
-                  x: 0,
-                  y: 0,
-                  z: 0,
-                },
-                scaleVector: 0.5,
-              },
-            },
-            {
-              type: "gif",
-              data: {
-                name: "gif3",
-                objUrl:
-                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
-                aspectRatio: 1.214285715,
-                positionalOffsetVector: {
-                  x: 1,
-                  y: 0,
-                  z: 0,
-                },
-                originOffsetVector: {
-                  x: 0,
-                  y: 0,
-                  z: 0,
-                },
-                scaleVector: 0.5,
-              },
-            },
-            {
-              type: "gif",
-              data: {
-                name: "gif4",
-                objUrl:
-                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
-                aspectRatio: 1.214285715,
-                positionalOffsetVector: {
-                  x: 0,
-                  y: 1,
-                  z: 0,
-                },
-                originOffsetVector: {
-                  x: 0,
-                  y: 0,
-                  z: 0,
-                },
-                scaleVector: 0.5,
-              },
-            },
-            {
-              type: "gif",
-              data: {
-                name: "gif5",
-                objUrl:
-                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
-                aspectRatio: 1.214285715,
-                positionalOffsetVector: {
+                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/testgif.gif",
+                aspectRatio: 1.714285714,
+                markerOffsetVector: {
                   x: 0,
                   y: -1,
                   z: 0,
                 },
-                originOffsetVector: {
+                localOffsetVector: {
                   x: 0,
-                  y: 0,
-                  z: 0,
-                },
-                scaleVector: 0.5,
-              },
-            },
-            {
-              type: "gif",
-              data: {
-                name: "gif6",
-                objUrl:
-                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
-                aspectRatio: 1.214285715,
-                positionalOffsetVector: {
-                  x: -1,
-                  y: 0,
-                  z: 0,
-                },
-                originOffsetVector: {
-                  x: 0,
-                  y: 0,
+                  y: -0.8,
                   z: 0,
                 },
                 scaleVector: 0.5,

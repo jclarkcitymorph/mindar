@@ -29,8 +29,8 @@ type TRenderTargetUpdateData = {
 
 export type TRenderTargetConstructorInput = {
   name: string;
-  positionalOffsetVector?: TVector3;
-  originOffsetVector?: TVector3;
+  markerOffsetVector?: TVector3;
+  localOffsetVector?: TVector3;
   scaleVector?: TVector | TVector2 | TVector3;
   vectorRotationLimits?: TVector3Limits;
   markerDimensions: TVector2;
@@ -39,8 +39,8 @@ export type TRenderTargetConstructorInput = {
 export default abstract class RenderTarget {
   protected abstract name: string;
   protected abstract markerDimensions: TVector2;
-  protected abstract positionalOffsetVector: TVector3;
-  protected abstract originOffsetVector: TVector3;
+  protected abstract markerOffsetVector: TVector3;
+  protected abstract localOffsetVector: TVector3;
   protected abstract scaleVector: TVector | TVector2 | TVector3;
   protected abstract renderData: RenderData;
   protected abstract renderObj: Entity | undefined;

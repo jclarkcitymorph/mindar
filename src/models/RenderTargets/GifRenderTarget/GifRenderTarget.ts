@@ -223,9 +223,9 @@ export default class GifRenderTarget extends RenderTarget {
 
     // Step 2: Calculate final scale
     const finalScale = {
-      x: avgMarkerData.scale.x * this.scaleVector,
-      y: avgMarkerData.scale.y * this.scaleVector,
-      z: avgMarkerData.scale.z * 1,
+      x: avgMarkerData.scale.x,
+      y: avgMarkerData.scale.y,
+      z: avgMarkerData.scale.z,
     };
 
     // Step 3: Calculate the attachment point offset in marker's local space

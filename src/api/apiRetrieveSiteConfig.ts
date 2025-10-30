@@ -24,7 +24,7 @@ export default async function apiRetrieveSiteConfig({}: {
           title: "Some Title",
         },
         render: {
-          aspectRatio: 1,
+          aspectRatio: 1.754385965,
           mindUrl:
             "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/targets.mind",
           globalRotationLimits: {

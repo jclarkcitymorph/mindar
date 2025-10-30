@@ -29,16 +29,16 @@ export default async function apiRetrieveSiteConfig({}: {
             "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/targets.mind",
           globalRotationLimits: {
             x: {
-              min: -30,
-              max: 30,
+              min: -55,
+              max: 55,
             },
             y: {
-              min: -30,
-              max: 30,
+              min: -55,
+              max: 55,
             },
             z: {
-              min: -30,
-              max: 30,
+              min: -55,
+              max: 55,
             },
           },
           webLinkUrl: "https://www.citymorphstudio.com",
@@ -128,6 +128,46 @@ export default async function apiRetrieveSiteConfig({}: {
                 positionalOffsetVector: {
                   x: 0,
                   y: 1,
+                  z: 0,
+                },
+                originOffsetVector: {
+                  x: 0,
+                  y: 0,
+                  z: 0,
+                },
+                scaleVector: 0.5,
+              },
+            },
+            {
+              type: "gif",
+              data: {
+                name: "gif5",
+                objUrl:
+                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
+                aspectRatio: 1.214285715,
+                positionalOffsetVector: {
+                  x: 0,
+                  y: -1,
+                  z: 0,
+                },
+                originOffsetVector: {
+                  x: 0,
+                  y: 0,
+                  z: 0,
+                },
+                scaleVector: 0.5,
+              },
+            },
+            {
+              type: "gif",
+              data: {
+                name: "gif6",
+                objUrl:
+                  "https://reel-em-in-hls-bucket.s3.us-west-1.amazonaws.com/assets/cmslogo.gif",
+                aspectRatio: 1.214285715,
+                positionalOffsetVector: {
+                  x: -1,
+                  y: 0,
                   z: 0,
                 },
                 originOffsetVector: {
